@@ -1,137 +1,156 @@
-# TOPOLOGÍA MULTIAGENTE Y SERVIDORES MCP (MODEL CONTEXT PROTOCOL)
+# ARQUITECTURA MULTIAGENTE DEL DOMINIO — TIRE COUNTER
 
-Este documento define la arquitectura multiagente del sistema, la matriz formal de contratos de entrada/salida, las invariantes de auditoría y el catálogo de servidores MCP (Model Context Protocol) ubicados en el monorepo.
+> **Importante**: Este documento describe los **agentes de la APLICACIÓN** (lógica de negocio del sistema de neumáticos).
+> Los agentes de **DESARROLLO** (gentle-ai: `gentle-orchestrator`, `gentle-ai-explore`, etc.) están en `.config/opencode/agents/` y usan ODD/Judgment Day para escribir código.
 
 ---
 
-## 1. UBICACIÓN Y TOPOLOGÍA DE ARCHIVOS EN EL MONOREPO
+## 1. TOPOLOGÍA DE ARCHIVOS EN EL MONOREPO
 
 ```text
 Counter/
 ├── packages/
-│   └── core-contracts/           # Contratos Zod, tipos TypeScript, FSM e interfaces de agentes
+│   └── core-contracts/           # Contratos Zod, tipos TS, FSM, interfaces de agentes de DOMINIO
 ├── apps/
-│   ├── mobile/                   # App React Native / Expo (Edge / Offline-First)
-│   └── receptor-desktop/         # Estación de recepción y validación (Node.js/Fastify + React)
+│   ├── mobile/                   # React Native / Expo (Edge / Offline-First) — planeado
+│   └── receptor-desktop/         # Fastify + React (estación recepción/validación)
 ├── tools/
 │   └── mcp-servers/              # SERVIDORES MCP DE AUDITORÍA Y TESTING
-│       ├── mcp-sqlite-inspector/ # Inspección DDL, consultas y estado SQLite
-│       ├── mcp-image-qa/         # Verificación WebP, dimensiones y cuotas de compresión
-│       ├── mcp-openxml-validator/# Validación de estructura OpenXML (.xlsx) y sumas
-│       └── mcp-fs-sandbox/       # Monitoreo de bóveda, locks y purga atómica
-├── docs/                         # Documentación de contexto y especificación de dominio
-└── agents.md                     # Este archivo de referencia de agentes y herramientas MCP
+│       ├── mcp-sqlite-inspector/ # Inspección DDL, consultas, estado SQLite
+│       ├── mcp-image-qa/         # Verificación WebP, dimensiones, cuotas compresión
+│       ├── mcp-openxml-validator/# Validación OpenXML (.xlsx) y sumas
+│       └── mcp-fs-sandbox/       # Monitoreo bóveda, locks, purga atómica
+├── docs/                         # Especificaciones SDD, dominio, i18n, TDD, Supabase
+└── agents.md                     # Este archivo: arquitectura multiagente del DOMINIO
 ```
 
 ---
 
-## 2. ARQUITECTURA MULTIAGENTE
+## 2. ARQUITECTURA MULTIAGENTE (DOMINIO)
 
-El sistema opera bajo un esquema coordinado y supervisado donde ningún dato o artefacto se persiste ni se despacha sin la validación del Gatekeeper (`auditor`).
+El sistema opera bajo esquema coordinado y supervisado: **ningún dato/artefacto se persiste o despacha sin validación del `auditor` (Gatekeeper QA)**.
 
 ```
-                             ┌───────────────────────┐
-                             │     orchestrator      │
-                             │ (FSM & Coordinador)   │
-                             └───────────┬───────────┘
-                                         │
-        ┌────────────────────────────────┼────────────────────────────────┐
-        │                                │                                │
-        ▼                                ▼                                ▼
-  ┌────────────┐                   ┌───────────┐                  ┌───────────────┐
-  │ aggregator │                   │ processor │                  │  list packer  │
-  └────────────┘                   └───────────┘                  └───────────────┘
-        │                                │                                │
-        └────────────────────────────────┼────────────────────────────────┘
-                                         │
-                                         ▼
-                            ┌─────────────────────────┐
-                            │  dispatch coordinator   │
-                            │ (ACK Handshake & Purga) │
-                            └────────────┬────────────┘
-                                         │
-                                         ▼
-                            ┌─────────────────────────┐
-                            │         auditor         │
-                            │   (QA Gatekeeper)       │
-                            └─────────────────────────┘
+                              ┌───────────────────────┐
+                              │    orchestrator       │  ← FSM & Coordinador CENTRAL (dominio)
+                              │  (core-contracts/fsm) │
+                              └───────────┬───────────┘
+                                          │
+         ┌────────────────────────────────┼────────────────────────────────┐
+         │                                │                                │
+         ▼                                ▼                                ▼
+   ┌────────────┐                   ┌───────────┐                  ┌───────────────┐
+   │ aggregator │                   │ processor │                  │  list packer  │
+   └────────────┘                   └───────────┘                  └───────────────┘
+         │                                │                                │
+         └────────────────────────────────┼────────────────────────────────┘
+                                          │
+                                          ▼
+                             ┌─────────────────────────┐
+                             │  dispatch coordinator   │
+                             │ (ACK Handshake & Purga) │
+                             └────────────┬────────────┘
+                                          │
+                                          ▼
+                             ┌─────────────────────────┐
+                             │         auditor         │  ← Gatekeeper QA (rechaza inválidos)
+                             └─────────────────────────┘
 ```
 
 ---
 
-## 3. MATRIZ DETALLADA DE AGENTES Y CONTRATOS
+## 3. MATRIZ DE AGENTES DE DOMINIO Y CONTRATOS
 
 | Agente | Ubicación Lógica | Rol Técnico | Entrada (Payload Contract) | Salida (Artifact / Event) | Invariante de Auditoría (`auditor`) |
 | :--- | :--- | :--- | :--- | :--- | :--- |
-| **`orchestrator`** | `core-contracts/fsm` & `apps/mobile/src/orchestrator` | Máquina de Estados FSM & Coordinador | Acciones de usuario, eventos de contenedor | Comandos a subagentes; Estado FSM persistido | Transiciones FSM legales y deterministas (`ACTIVO` $\to$ `BLOQUEADO_EN_BOVEDA` $\to$ `DESPACHADO_PENDIENTE_ACK` $\to$ `CONFIRMADO_EN_DESTINO` $\to$ `PURGADO`). Bloqueo inmediato tras despacho. |
-| **`aggregator`** | `apps/mobile/src/agents/aggregator` | Agregación de Inventario | `{ contenedorId, llanta, ancho, perfil, marca?, deltaCantidad }` | `ItemNeumatico` consolidado + Snapshot de totales | Consolidación estricta por `claveCompuesta` (`${ancho}/${perfil}R${llanta}--${marca \|\| 'GENERICA'}`). `cantidad >= 1`. Cero duplicados en base de datos. |
-| **`processor`** | `apps/mobile/src/agents/processor` | Pipeline de Imagen Edge | `ByteStream` crudo + `contenedorId` | `EvidenciaFoto` (WebP, metadata, hash local SHA-256) | Formato WebP nativo, lado mayor $\le 1280\text{ px}$, peso estricto $< 153.600\text{ bytes}$ (150 KB). |
-| **`list packer`** | `apps/mobile/src/agents/list-packer` | Compilador OpenXML y empaquetador ZIP | Snapshot inmutable de lote cerrado | `PaqueteDespacho` (`.zip` con `.xlsx` internacional bilingüe/inglés + fotos) + SHA-256 | Estructura OpenXML válida; suma matemática en celdas Excel exactamente idéntica al total acumulado en SQLite. |
-| **`dispatch coordinator`** | `apps/mobile/src/agents/dispatch` | Protocolo de Transporte & Purga | `PaqueteDespacho` + `ReceiptAckToken` | Orden de purga atómica local ejecutada | Coincidencia criptográfica estricta: `hash_ack == hash_local`. Aborto fulminante y bloqueo de borrado si el token/hash es inválido. |
-| **`auditor`** | `core-contracts/auditor` & `tools/mcp-servers` | Gatekeeper de QA y Validación Continua | Payloads, esquemas y binarios generados por los agentes | `AuditVerdict` (`approved: boolean`, `violations: string[]`) | Rechaza cualquier artefacto, violación i18n, inconsistencia de cantidades o transición fuera del estándar SDD. |
+| **`orchestrator`** | `core-contracts/fsm` | Máquina de Estados FSM & Coordinador central | Acciones usuario, eventos contenedor | Comandos a subagentes; Estado FSM persistido | Transiciones FSM legales y deterministas (`ACTIVO` → `BLOQUEADO_EN_BOVEDA` → `DESPACHADO_PENDIENTE_ACK` → `CONFIRMADO_EN_DESTINO` → `PURGADO`). Bloqueo inmediato tras despacho. |
+| **`aggregator`** | `core-contracts/aggregator.ts` | Agregación de Inventario | `{ contenedorId, llanta, ancho, perfil, marca?, deltaCantidad }` | `ItemNeumatico` consolidado + Snapshot totales | Consolidación estricta por `claveCompuesta` (`${ancho}/${perfil}R${llanta}--${marca \|\| 'GENERICA'}`). `cantidad >= 1`. Cero duplicados en BD. |
+| **`processor`** | `core-contracts/agents/processor.ts` | Pipeline de Imagen Edge | `ByteStream` crudo + `contenedorId` | `EvidenciaFoto` (WebP, metadata, hash local SHA-256) | Formato WebP nativo, lado mayor ≤ 1280 px, peso estricto < 153.600 bytes (150 KB). |
+| **`list packer`** | `core-contracts/agents/list-packer.ts` | Compilador OpenXML y empaquetador ZIP | Snapshot inmutable de lote cerrado | `PaqueteDespacho` (`.zip` con `.xlsx` bilingüe ES/EN + fotos) + SHA-256 | Estructura OpenXML válida; suma matemática en celdas Excel exactamente idéntica al `totalAcumulado` en SQLite. |
+| **`dispatch coordinator`** | `core-contracts/dispatch.ts` | Protocolo Transporte & Purga | `PaqueteDespacho` + `ReceiptAckToken` | Orden de purga atómica local ejecutada | Coincidencia criptográfica estricta: `hash_ack == hash_local`. Aborto fulminante y bloqueo de borrado si token/hash inválido. |
+| **`auditor`** | `core-contracts/auditor` + `tools/mcp-servers` | Gatekeeper QA y Validación Continua | Payloads, esquemas, binarios generados por agentes | `AuditVerdict` (`approved: boolean`, `violations: string[]`) | Rechaza cualquier artefacto, violación i18n, inconsistencia cantidades o transición fuera del estándar SDD. |
+
+> **Nota**: El `orchestrator` aquí es el **coordinador de dominio** (FSM en `core-contracts/fsm.ts`), NO el `gentle-orchestrator` de desarrollo.
 
 ---
 
-## 4. CATÁLOGO DE SERVIDORES MCP (MODEL CONTEXT PROTOCOL)
+## 4. CATÁLOGO DE SERVIDORES MCP (TESTING/AUDITORÍA)
 
-Los servidores MCP residen en `tools/mcp-servers/` y proporcionan herramientas programáticas de inspección y validación automatizada para los agentes durante el desarrollo, pruebas e integración continua:
+Residen en `tools/mcp-servers/` y proveen herramientas programáticas para validación automatizada durante desarrollo, tests y CI.
 
-### 4.1 `mcp-sqlite-inspector` (`tools/mcp-servers/mcp-sqlite-inspector`)
-- **Propósito:** Auditar el DDL de la base de datos SQLite embebida, inspeccionar tablas y comprobar la atomicidad de las transacciones de inventario.
-- **Herramientas expuestas:**
-  - `inspect_schema`: Inspecciona las tablas, índices y restricciones en la base de datos local.
-  - `query_container_state`: Consulta el estado actual de un contenedor, sus items acumulados y el historial transaccional.
-  - `verify_vault_isolation`: Comprueba que los registros en estado `BLOQUEADO_EN_BOVEDA` no permitan operaciones de inserción o actualización (inmutabilidad).
+### 4.1 `mcp-sqlite-inspector` (`tools/mcp-servers/src/mcp-sqlite-inspector`)
+- **Propósito**: Auditar DDL SQLite embebida, inspeccionar tablas, comprobar atomicidad transacciones inventario.
+- **Herramientas**: `inspect_schema`, `query_container_state`, `verify_vault_isolation`
 
-### 4.2 `mcp-image-qa` (`tools/mcp-servers/mcp-image-qa`)
-- **Propósito:** Validar en tiempo de ejecución o en suite de pruebas que ninguna evidencia fotográfica exceda las dimensiones máximas ni el peso estricto en bytes.
-- **Herramientas expuestas:**
-  - `inspect_image_metadata`: Extrae resolución (ancho x alto), espacio de color y formato del archivo.
-  - `verify_compression_limits`: Verifica que el archivo no supere el límite de $153.600\text{ bytes}$ ($150\text{ KB}$) y que su lado mayor sea $\le 1280\text{ px}$.
-  - `check_webp_integrity`: Comprueba la integridad estructural del encabezado RIFF/WebP y la validez del checksum.
+### 4.2 `mcp-image-qa` (`tools/mcp-servers/src/mcp-image-qa`)
+- **Propósito**: Validar que evidencia fotográfica no exceda dimensiones máximas ni peso estricto.
+- **Herramientas**: `inspect_image_metadata`, `verify_compression_limits`, `check_webp_integrity`
 
-### 4.3 `mcp-openxml-validator` (`tools/mcp-servers/mcp-openxml-validator`)
-- **Propósito:** Verificar la conformidad del binario `.xlsx` de despacho y contrastar las sumas matemáticas contra los datos en SQLite.
-- **Herramientas expuestas:**
-  - `parse_xlsx_structure`: Valida el esquema OpenXML, hojas requeridas y consistencia del XML subyacente.
-  - `audit_manifest_totals`: Extrae y suma todas las celdas numéricas de cantidad en el Excel, comparándolas contra el `totalAcumulado` del lote.
-  - `inspect_zip_archive`: Examina el contenido del archivo `.zip` de despacho, verificando la presencia del manifiesto Excel y todas las fotos referenciadas con sus hashes SHA-256.
+### 4.3 `mcp-openxml-validator` (`tools/mcp-servers/src/mcp-openxml-validator`)
+- **Propósito**: Verificar conformidad binario `.xlsx` despacho y contrastar sumas vs SQLite.
+- **Herramientas**: `parse_xlsx_structure`, `audit_manifest_totals`, `inspect_zip_archive`
 
-### 4.4 `mcp-fs-sandbox` (`tools/mcp-servers/mcp-fs-sandbox`)
-- **Propósito:** Monitorear el almacenamiento en el sandbox de la app, verificar el aislamiento de la bóveda de cuarentena y auditar la purga atómica de archivos tras el ACK.
-- **Herramientas expuestas:**
-  - `verify_vault_storage`: Comprueba los permisos y aislamiento de la carpeta de cuarentena local.
-  - `trace_purge_execution`: Registra y valida la secuencia de borrado físico de fotos tras la recepción satisfactoria de un `ReceiptAckToken`.
-  - `check_file_locks`: Verifica si existen descriptores de archivo abiertos o bloqueos pendientes que impidan la purga atómica.
+### 4.4 `mcp-fs-sandbox` (`tools/mcp-servers/src/mcp-fs-sandbox`)
+- **Propósito**: Monitorear almacenamiento sandbox app, verificar aislamiento bóveda cuarentena, auditar purga atómica tras ACK.
+- **Herramientas**: `verify_vault_storage`, `trace_purge_execution`, `check_file_locks`
 
 ---
 
-## 5. CICLO OPERATIVO DEL PROTOCOLO DE DESPACHO Y PURGA
+## 5. CICLO OPERATIVO PROTOCOLO DESPACHO Y PURGA
 
 ```
    Terminal Móvil (Operario)                                Estación Receptora (Supervisor/PC)
   ─────────────────────────────                            ────────────────────────────────────
-                │                                                           │
-   [1] Pulsa "Despachar Lote"                                               │
-   [2] FSM: BLOQUEADO_EN_BOVEDA                                             │
-       - Bloqueo UI y borrado de pantalla activa                            │
-       - list-packer genera .xlsx + .zip con SHA-256 (H1)                    │
-       - FSM: DESPACHADO_PENDIENTE_ACK                                      │
-                │                                                           │
-                │──────── Envío ZIP / Red Local / P2P ─────────────────────>│
-                │                                                           │
-                │                                               [3] Ingesta y Validación
-                │                                                   - Calcula SHA-256 (H2)
-                │                                                   - Comprueba H2 == H1
-                │                                                   - Supervisor pulsa "Tic"
-                │                                                   - Emite ReceiptAckToken
-                │                                                           │
-                │<─────── Envío ReceiptAckToken firmado ────────────────────│
-                │
-   [4] dispatch-coordinator valida token:
-       - ¿Hash en ACK coincide con H1 local?
-       - SÍ: Purga física de fotos locales WebP.
-             FSM pasa a PURGADO.
-       - NO: ABORTO de purga, alarma a auditor,
-             archivos preservados en bóveda.
+               │                                                           │
+      [1] Pulsa "Despachar Lote"                                               │
+      [2] FSM: BLOQUEADO_EN_BOVEDA                                             │
+          - Bloqueo UI y borrado pantalla activa                               │
+          - list-packer genera .xlsx + .zip con SHA-256 (H1)                    │
+          - FSM: DESPACHADO_PENDIENTE_ACK                                      │
+               │                                                           │
+               │──────── Envío ZIP / Red Local / P2P ─────────────────────>│
+               │                                                           │
+               │                                               [3] Ingesta y Validación
+               │                                                   - Calcula SHA-256 (H2)
+               │                                                   - Comprueba H2 == H1
+               │                                                   - Supervisor pulsa "Tic"
+               │                                                   - Emite ReceiptAckToken
+               │                                                           │
+               │<─────── Envío ReceiptAckToken firmado ────────────────────│
+               │
+      [4] dispatch-coordinator valida token:
+          - ¿Hash en ACK coincide con H1 local?
+          - SÍ: Purga física fotos locales WebP.
+                FSM pasa a PURGADO.
+          - NO: ABORTO purga, alarma a auditor,
+                archivos preservados en bóveda.
 ```
+
+---
+
+## 6. AGENTES DE DESARROLLO (gentle-ai) — RESUMEN
+
+| Agente gentle-ai | Propósito | Modo |
+|------------------|-----------|------|
+| `gentle-orchestrator` | ODD: autoriza, explora, trackea features, implementa, verifica, commitea | `default_agent` en OpenCode |
+| `gentle-ai-explore` | Exploración read-only, mapeo código, CodeGraph | subagent hidden |
+| `gentle-ai-verify` | Verificación técnica read-only, probes derivados de specs | subagent hidden |
+| `gentle-ai-worker` | Implementación acotada, tests enfocados, evidence review-ready | subagent hidden |
+| `jd-fix-agent` | Fixes quirúrgicos para findings Judgment Day confirmados | subagent hidden |
+| `jd-judge-a/b` | Revisión adversarial ciega independiente (2 jueces) | subagent hidden |
+| `review-risk/readability/reliability/resilience` | Lentes R1-R4 (security, naming, tests, ops) | subagent hidden |
+
+Configuración en: `~/.config/opencode/opencode.jsonc` (global) o `.opencode/` (workspace).
+
+---
+
+## 7. DISTINCIÓN CLAVE
+
+| Concepto | `orchestrator` (dominio) | `gentle-orchestrator` (dev) |
+|----------|--------------------------|----------------------------|
+| **Qué es** | FSM central de la app de neumáticos | Asistente IA que ejecuta ODD |
+| **Dónde vive** | `packages/core-contracts/src/fsm.ts` | Prompt en `opencode.jsonc` |
+| **Ejecuta** | Transiciones de estado de lotes | Workflow: autorizar → explorar → documentar → implementar → verificar → commit |
+| **Valida** | Invariantes de negocio (auditor) | Specs ODD, tests, código |
+
+> **Regla**: En código y docs del dominio, "orchestrator" = FSM. En config de desarrollo, "gentle-orchestrator" = agente IA.
