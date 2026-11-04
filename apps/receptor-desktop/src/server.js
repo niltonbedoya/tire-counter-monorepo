@@ -37,7 +37,10 @@ const {
 
 const PORT = process.env.PORT || 3000;
 const SUPABASE_URL = process.env.SUPABASE_URL || 'https://eypaqvrvneriioslmqgx.supabase.co';
-const SUPABASE_KEY = process.env.SUPABASE_KEY || 'sb_secret_qhAtu7eH9noFk9WflcbLkA_mTol1SoW';
+const SUPABASE_KEY = process.env.SUPABASE_KEY;
+if (!SUPABASE_KEY) {
+  throw new Error('SUPABASE_KEY environment variable is required');
+}
 
 const localAdapter = new SQLiteLocalAdapter();
 const cloudAdapter = new SupabaseCloudAdapter({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_KEY });
