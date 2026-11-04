@@ -1,0 +1,19 @@
+{
+  "name": "@tire-counter/core-contracts",
+  "version": "1.0.0",
+  "description": "Tipos, esquemas Zod, contratos multiagente e i18n para el sistema de neumáticos",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "zod": "^3.24.1"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
+  }
+}
