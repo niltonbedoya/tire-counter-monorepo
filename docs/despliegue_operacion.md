@@ -141,10 +141,14 @@ docker run -d \
 docker compose up -d receptor-desktop
 ```
 
-3. (Opcional) Levantar con el túnel Cloudflare integrado para exponer a `services-nba.com`:
+3. (Opcional) Levantar con el túnel Cloudflare integrado para exponer a `counter.services-nba.com`:
 ```bash
 docker compose --profile tunnel up -d
 ```
+
+> **Estrategia de prueba y despliegue progresivo**:
+> 1. **Fase 1 (Prueba local/doméstica)**: Levantar y validar el contenedor en el servidor doméstico (Linux Mint) con Docker / Docker Compose. Opcionalmente vincular el túnel hacia `counter.services-nba.com` para probar acceso externo.
+> 2. **Fase 2 (Piloto internacional en Corea)**: Una vez validada la estabilidad, replicar el mismo `docker-compose.yml` en el VPS definitivo para garantizar baja latencia y alta disponibilidad desatendida.
 
 ---
 
@@ -158,7 +162,7 @@ docker compose --profile tunnel up -d
 - [ ] Tests ejecutados y verdes: `npm test` (43/43 tests pasando).
 - [ ] `dist/` sincronizado con `src/` tras cualquier cambio de código.
 - [ ] Servidor levantado y responde en `http://localhost:<PORT>`.
-- [ ] (Producción) Docker / Docker Compose operativo en VPS con túnel Cloudflare hacia `services-nba.com`.
+- [ ] (Producción) Docker / Docker Compose operativo con túnel Cloudflare hacia `counter.services-nba.com`.
 
 ---
 
