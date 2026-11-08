@@ -42,7 +42,12 @@ function request(method: string, path: string, body?: any): Promise<{ status: nu
 describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
   beforeAll(async () => {
     serverProc = cp.fork('./src/server.js', {
-      env: { ...process.env, PORT: TEST_PORT.toString() },
+      env: {
+        ...process.env,
+        PORT: TEST_PORT.toString(),
+        SUPABASE_URL: process.env.SUPABASE_URL || 'https://mock.supabase.co',
+        SUPABASE_KEY: process.env.SUPABASE_KEY || 'mock-service-key-for-test-suite',
+      },
     });
     // Wait for server to bind port by polling
     const start = Date.now();

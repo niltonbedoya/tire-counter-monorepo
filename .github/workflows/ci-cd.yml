@@ -16,10 +16,10 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Node.js 20
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 22
           cache: "npm"
 
       - name: Install dependencies
@@ -30,6 +30,9 @@ jobs:
 
       - name: Run test suite
         run: npm test
+        env:
+          SUPABASE_URL: https://mock.supabase.co
+          SUPABASE_KEY: mock-service-key-for-test-suite
 
   deploy:
     name: Deploy to Mac Mini (Production)
