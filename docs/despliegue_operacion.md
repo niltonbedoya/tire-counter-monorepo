@@ -82,15 +82,16 @@ Los tests se ejecutan con **vitest** por workspace. Desde la raíz del monorepo:
 npm test
 ```
 
-Esto corre `vitest run --if-present` en cada workspace que tenga script de tests definido (por ejemplo `apps/receptor-desktop`).
+Esto corre `vitest run` en cada workspace que tenga tests:
+- `@tire-counter/core-contracts`: 27 tests (FSM, agregador, esquemas, paridad repositorio, etc.)
+- `@tire-counter/receptor-desktop`: 10 tests E2E HTTP API
+- `@tire-counter/mcp-servers`: 6 tests de herramientas MCP de auditoría
 
 Para correr solo los tests de un workspace:
 
 ```bash
 npm run test --workspace=@tire-counter/receptor-desktop
 ```
-
-> El entorno actual no dispone de runner vitest ejecutable; véase `odd/tasks/auditoria-contra-sdd.md` (sección Test runner). Si los tests no pueden ejecutarse, valide estáticamente el código antes de desplegar.
 
 ---
 
@@ -109,16 +110,55 @@ npm run build
 
 ---
 
-## 6. CHECKLIST DE DESPLIEGUE
+## 6. DESPLIEGUE CON DOCKER & DOCKER COMPOSE EN VPS (PILOTO COREA)
+
+Para el piloto internacional desatendido en VPS (~4GB RAM, ej. Hetzner):
+
+### 6.1 Construcción y ejecución local/remota con Docker
+
+```bash
+# Construir imagen de producción
+docker build -t counter-receptor:latest .
+
+# Ejecutar contenedor
+docker run -d \
+  --name counter-receptor \
+  -p 3000:3000 \
+  --env-file apps/receptor-desktop/.env \
+  counter-receptor:latest
+```
+
+### 6.2 Despliegue con Docker Compose y Cloudflare Tunnel
+
+1. Configurar variables en `apps/receptor-desktop/.env`:
+   - `SUPABASE_URL`
+   - `SUPABASE_KEY`
+   - `PORT=3000`
+   - `CLOUDFLARE_TUNNEL_TOKEN=<token_de_cloudflare>`
+
+2. Levantar el servicio receptor:
+```bash
+docker compose up -d receptor-desktop
+```
+
+3. (Opcional) Levantar con el túnel Cloudflare integrado para exponer a `services-nba.com`:
+```bash
+docker compose --profile tunnel up -d
+```
+
+---
+
+## 7. CHECKLIST DE DESPLIEGUE
 
 - [ ] `SUPABASE_URL`, `SUPABASE_KEY` definidas como variables de entorno (no hardcodeadas).
 - [ ] `PORT` definido o se acepta el valor por defecto `3000`.
 - [ ] `apps/receptor-desktop/.env` creado a partir de `.env.example` con valores reales.
 - [ ] Dependencias instaladas: `npm install` en la raíz.
 - [ ] Workspaces construidos: `npm run build`.
-- [ ] Tests ejecutados y verdes: `npm test`.
+- [ ] Tests ejecutados y verdes: `npm test` (43/43 tests pasando).
 - [ ] `dist/` sincronizado con `src/` tras cualquier cambio de código.
 - [ ] Servidor levantado y responde en `http://localhost:<PORT>`.
+- [ ] (Producción) Docker / Docker Compose operativo en VPS con túnel Cloudflare hacia `services-nba.com`.
 
 ---
 

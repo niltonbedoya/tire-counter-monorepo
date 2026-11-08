@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  receptor-desktop:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: counter-receptor
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=production
+      - SUPABASE_URL=${SUPABASE_URL}
+      - SUPABASE_KEY=${SUPABASE_KEY}
+    env_file:
+      - ./apps/receptor-desktop/.env
+
+  # Optional Cloudflare Tunnel for secure remote access without open ports
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: counter-tunnel
+    restart: unless-stopped
+    command: tunnel run
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARE_TUNNEL_TOKEN}
+    depends_on:
+      - receptor-desktop
+    profiles:
+      - tunnel
