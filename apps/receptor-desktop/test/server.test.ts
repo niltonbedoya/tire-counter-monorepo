@@ -41,7 +41,7 @@ function request(method: string, path: string, body?: any): Promise<{ status: nu
 
 describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
   beforeAll(async () => {
-    serverProc = cp.fork('./apps/receptor-desktop/src/server.js', {
+    serverProc = cp.fork('./src/server.js', {
       env: { ...process.env, PORT: TEST_PORT.toString() },
     });
     // Wait for server to bind port by polling
@@ -85,7 +85,7 @@ describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
   });
 
   it('POST /api/contenedores/:id/items should aggregate new tires with composite key', async () => {
-    const res = await request('POST', '/api/contenedores/cnt-203248/items', {
+    const res = await request('POST', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000/items', {
       llanta: 18,
       ancho: 225,
       perfil: 50,
@@ -98,7 +98,7 @@ describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
   });
 
   it('POST /api/contenedores/:id/fotos should process raw image into WebP under 150 KB and max 1280 px', async () => {
-    const res = await request('POST', '/api/contenedores/cnt-203248/fotos', {});
+    const res = await request('POST', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000/fotos', {});
     expect(res.status).toBe(200);
     expect(res.data.success).toBe(true);
     expect(res.data.evidencia.formato).toBe('image/webp');
@@ -107,19 +107,19 @@ describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
   });
 
   it('POST /api/contenedores/:id/despachar should lock batch in vault, compile XLSX and ZIP, and transition to DESPACHADO_PENDIENTE_ACK', async () => {
-    const res = await request('POST', '/api/contenedores/cnt-203248/despachar');
+    const res = await request('POST', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000/despachar');
     expect(res.status).toBe(200);
     expect(res.data.success).toBe(true);
     expect(res.data.paquete.sha256).toHaveLength(64);
 
     // Verify container is locked
-    const cRes = await request('GET', '/api/contenedores/cnt-203248');
+    const cRes = await request('GET', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000');
     expect(cRes.data.container.estado).toBe('DESPACHADO_PENDIENTE_ACK');
     expect(cRes.data.container.hashSha256Paquete).toBe(res.data.paquete.sha256);
   });
 
   it('POST /api/contenedores/:id/items should reject modifications once container is locked (FSM Inmutability)', async () => {
-    const res = await request('POST', '/api/contenedores/cnt-203248/items', {
+    const res = await request('POST', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000/items', {
       llanta: 16,
       ancho: 205,
       perfil: 55,
@@ -131,13 +131,13 @@ describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
   });
 
   it('POST /api/contenedores/:id/validar-tic should execute supervisor Tic validation, verify SHA-256 and purge photos into PURGADO', async () => {
-    const res = await request('POST', '/api/contenedores/cnt-203248/validar-tic');
+    const res = await request('POST', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000/validar-tic');
     expect(res.status).toBe(200);
     expect(res.data.success).toBe(true);
     expect(res.data.ackToken.status).toBe('VERIFIED');
     expect(res.data.purgeResult.purged).toBe(true);
 
-    const cRes = await request('GET', '/api/contenedores/cnt-203248');
+    const cRes = await request('GET', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000');
     expect(cRes.data.container.estado).toBe('PURGADO');
     expect(cRes.data.fotos.length).toBe(0); // Photos purged!
   });
@@ -187,12 +187,12 @@ describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
     expect(found.cantidadTotal).toBe(12);
   });
 
-  it('POST /api/contenedores/reset-demo should reset cnt-203248 back to ACTIVO and unblock testing', async () => {
+  it('POST /api/contenedores/reset-demo should reset 550e8400-e29b-41d4-a716-446655440000 back to ACTIVO and unblock testing', async () => {
     const res = await request('POST', '/api/contenedores/reset-demo');
     expect(res.status).toBe(200);
     expect(res.data.success).toBe(true);
 
-    const cRes = await request('GET', '/api/contenedores/cnt-203248');
+    const cRes = await request('GET', '/api/contenedores/550e8400-e29b-41d4-a716-446655440000');
     expect(cRes.status).toBe(200);
     expect(cRes.data.container.estado).toBe('ACTIVO');
     expect(cRes.data.items.length).toBeGreaterThan(0);

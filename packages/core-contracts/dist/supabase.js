@@ -327,41 +327,17 @@ class OfflineFirstHybridRepository {
     }
     async validarCredenciales(codigo, password) {
         if (this.cloudRepo && password) {
-            const res = await this.cloudRepo.validarCredenciales(codigo, password);
-            if (res.ok)
-                return res;
-            // Si la nube responde error de credenciales explícito, no dejar entrar
-            if (res.error && !res.error.includes('conexión') && !res.error.includes('fetch')) {
-                return res;
+            try {
+                const res = await this.cloudRepo.validarCredenciales(codigo, password);
+                if (res.ok)
+                    return res;
+            }
+            catch {
+                // Cloud repo unreachable: no offline credentials exist, reject below.
             }
         }
-        // Fallback offline si el servidor está inaccesible o es test
-        const clean = codigo.trim().toUpperCase();
-        if (clean === 'ADMIN' || clean === 'SUPERVISOR') {
-            return {
-                ok: true,
-                user: {
-                    id: 'user-admin-local',
-                    email: 'admin@counter.local',
-                    nombre: 'Supervisor ADMIN',
-                    rol: 'admin',
-                    codigo: 'ADMIN',
-                },
-            };
-        }
-        if (clean === '4120' || clean === 'OP-001') {
-            return {
-                ok: true,
-                user: {
-                    id: 'user-4120-local',
-                    email: '4120@counter.local',
-                    nombre: 'Carlos Sanchez (4120)',
-                    rol: 'operario',
-                    codigo: '4120',
-                },
-            };
-        }
-        return { ok: false, error: 'Código de usuario no reconocido' };
+        // Offline mode has no real credentials configured: reject any fallback auth.
+        return { ok: false, error: 'Credenciales no configuradas en modo offline' };
     }
     async crearContenedor(datos) {
         const local = await this.localRepo.crearContenedor(datos);

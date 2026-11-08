@@ -1,7 +1,11 @@
 "use strict";
+var __importDefault = (this && this.__importDefault) || function (mod) {
+    return (mod && mod.__esModule) ? mod : { "default": mod };
+};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.computeCompositeKey = computeCompositeKey;
 exports.aggregateItem = aggregateItem;
+const node_crypto_1 = __importDefault(require("node:crypto"));
 function computeCompositeKey(ancho, perfil, llanta, marca, moduloMarcaActivo = true) {
     const brand = moduloMarcaActivo && marca && marca.trim() !== '' ? marca.trim() : 'GENERICA';
     return `${ancho}/${perfil}R${llanta}--${brand}`;
@@ -40,7 +44,7 @@ function aggregateItem(existingItems, input) {
             throw new Error(`No se puede inicializar un item con cantidad menor a 1 (recibido: ${deltaCantidad})`);
         }
         targetItem = {
-            id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+            id: node_crypto_1.default.randomUUID(),
             contenedorId,
             llanta,
             ancho,

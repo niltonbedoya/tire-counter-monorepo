@@ -12,11 +12,12 @@ export interface ProcessorInput {
 export function processImageBuffer(input: ProcessorInput): {
   evidencia: EvidenciaFoto;
   webpBuffer: Buffer;
+  simulado: true;
 } {
   const { contenedorId, rawBuffer, originalWidth = 3840, originalHeight = 2160 } = input;
   const now = new Date().toISOString();
 
-  // 1. Calcular escalado para que el lado mayor sea <= 1280 px
+  // 1. Scale so the longest side is <= 1280 px
   const maxOriginal = Math.max(originalWidth, originalHeight);
   let scale = 1.0;
   if (maxOriginal > 1280) {
@@ -26,9 +27,9 @@ export function processImageBuffer(input: ProcessorInput): {
   const targetHeight = Math.round(originalHeight * scale);
   const dimensionMaxPx = Math.max(targetWidth, targetHeight);
 
-  // 2. Compresión a WebP (garantizando peso < 153.600 bytes = 150 KB)
-  // Generamos un binario WebP válido con encabezado RIFF/WEBP
-  const targetSize = Math.min(rawBuffer.length, 120 * 1024); // ~120 KB (estrictamente < 150 KB)
+  // 2. WebP compression (ensuring weight < 153,600 bytes = 150 KB)
+  // NOTE: In production, use a real WebP encoder instead of this synthetic RIFF/WEBP placeholder.
+  const targetSize = Math.min(rawBuffer.length, 120 * 1024); // ~120 KB (strictly < 150 KB)
   const webpBuffer = Buffer.alloc(targetSize);
 
   // Magic bytes RIFF
@@ -47,7 +48,7 @@ export function processImageBuffer(input: ProcessorInput): {
 
   const pesoBytes = webpBuffer.length;
   const sha256Local = crypto.createHash('sha256').update(webpBuffer).digest('hex');
-  const fotoId = `foto-${Date.now()}-${Math.random().toString(36).substring(2, 8)}`;
+  const fotoId = crypto.randomUUID();
   const rutaLocal = `vault/fotos/${fotoId}.webp`;
 
   const evidencia: EvidenciaFoto = {
@@ -64,5 +65,6 @@ export function processImageBuffer(input: ProcessorInput): {
   return {
     evidencia,
     webpBuffer,
+    simulado: true,
   };
 }

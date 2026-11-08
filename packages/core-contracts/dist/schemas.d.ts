@@ -27,6 +27,37 @@ export declare const OperarioSchema: z.ZodObject<{
     activo: boolean;
     createdAt: string;
 }>;
+export declare const ItemNeumaticoBaseSchema: z.ZodObject<{
+    id: z.ZodString;
+    contenedorId: z.ZodString;
+    llanta: z.ZodNumber;
+    ancho: z.ZodNumber;
+    perfil: z.ZodNumber;
+    marca: z.ZodDefault<z.ZodString>;
+    claveCompuesta: z.ZodString;
+    cantidad: z.ZodNumber;
+    updatedAt: z.ZodString;
+}, "strip", z.ZodTypeAny, {
+    contenedorId: string;
+    llanta: number;
+    ancho: number;
+    perfil: number;
+    marca: string;
+    id: string;
+    claveCompuesta: string;
+    cantidad: number;
+    updatedAt: string;
+}, {
+    contenedorId: string;
+    llanta: number;
+    ancho: number;
+    perfil: number;
+    id: string;
+    claveCompuesta: string;
+    cantidad: number;
+    updatedAt: string;
+    marca?: string | undefined;
+}>;
 export declare const ItemNeumaticoSchema: z.ZodEffects<z.ZodObject<{
     id: z.ZodString;
     contenedorId: z.ZodString;
@@ -76,6 +107,25 @@ export declare const ItemNeumaticoSchema: z.ZodEffects<z.ZodObject<{
     claveCompuesta: string;
     cantidad: number;
     updatedAt: string;
+    marca?: string | undefined;
+}>;
+export declare const ItemInputSchema: z.ZodObject<{
+    llanta: z.ZodNumber;
+    ancho: z.ZodNumber;
+    perfil: z.ZodNumber;
+    marca: z.ZodDefault<z.ZodOptional<z.ZodString>>;
+    deltaCantidad: z.ZodNumber;
+}, "strip", z.ZodTypeAny, {
+    llanta: number;
+    ancho: number;
+    perfil: number;
+    marca: string;
+    deltaCantidad: number;
+}, {
+    llanta: number;
+    ancho: number;
+    perfil: number;
+    deltaCantidad: number;
     marca?: string | undefined;
 }>;
 export declare const EvidenciaFotoSchema: z.ZodObject<{

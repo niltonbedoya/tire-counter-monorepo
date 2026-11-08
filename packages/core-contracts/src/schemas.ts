@@ -21,7 +21,7 @@ export const OperarioSchema = z.object({
   createdAt: z.string().datetime(),
 });
 
-export const ItemNeumaticoSchema = z.object({
+export const ItemNeumaticoBaseSchema = z.object({
   id: z.string().uuid(),
   contenedorId: z.string().uuid(),
   llanta: z.number().int().min(10).max(30),
@@ -31,7 +31,9 @@ export const ItemNeumaticoSchema = z.object({
   claveCompuesta: z.string(),
   cantidad: z.number().int().min(1),
   updatedAt: z.string().datetime(),
-}).refine(
+});
+
+export const ItemNeumaticoSchema = ItemNeumaticoBaseSchema.refine(
   (data) => {
     const brand = data.marca && data.marca.trim() !== '' ? data.marca.trim() : 'GENERICA';
     const expected = `${data.ancho}/${data.perfil}R${data.llanta}--${brand}`;
@@ -41,6 +43,14 @@ export const ItemNeumaticoSchema = z.object({
     message: 'claveCompuesta debe coincidir con ${ancho}/${perfil}R${llanta}--${marca || GENERICA}',
   }
 );
+
+export const ItemInputSchema = z.object({
+  llanta: z.number().int().min(10).max(30),
+  ancho: z.number().int().min(100).max(400),
+  perfil: z.number().int().min(20).max(95),
+  marca: z.string().optional().default(''),
+  deltaCantidad: z.number().int().min(1),
+});
 
 export const EvidenciaFotoSchema = z.object({
   id: z.string().uuid(),

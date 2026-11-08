@@ -46,3 +46,6 @@ coverage/
 
 # Cloudflare tunnel
 cloudflared.exe
+
+# Agent Teams Lite
+.atl/

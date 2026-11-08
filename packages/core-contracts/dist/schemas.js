@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.AuditVerdictSchema = exports.ReceiptAckTokenSchema = exports.ProyectoContenedorSchema = exports.EvidenciaFotoSchema = exports.ItemNeumaticoSchema = exports.OperarioSchema = exports.EstadoContenedorSchema = exports.RolUsuarioSchema = exports.IdiomaCodigoSchema = void 0;
+exports.AuditVerdictSchema = exports.ReceiptAckTokenSchema = exports.ProyectoContenedorSchema = exports.EvidenciaFotoSchema = exports.ItemInputSchema = exports.ItemNeumaticoSchema = exports.ItemNeumaticoBaseSchema = exports.OperarioSchema = exports.EstadoContenedorSchema = exports.RolUsuarioSchema = exports.IdiomaCodigoSchema = void 0;
 const zod_1 = require("zod");
 exports.IdiomaCodigoSchema = zod_1.z.enum(['es', 'en', 'ru', 'ko', 'zh']);
 exports.RolUsuarioSchema = zod_1.z.enum(['OPERARIO', 'SUPERVISOR', 'ADMINISTRADOR']);
@@ -20,7 +20,7 @@ exports.OperarioSchema = zod_1.z.object({
     activo: zod_1.z.boolean(),
     createdAt: zod_1.z.string().datetime(),
 });
-exports.ItemNeumaticoSchema = zod_1.z.object({
+exports.ItemNeumaticoBaseSchema = zod_1.z.object({
     id: zod_1.z.string().uuid(),
     contenedorId: zod_1.z.string().uuid(),
     llanta: zod_1.z.number().int().min(10).max(30),
@@ -30,12 +30,20 @@ exports.ItemNeumaticoSchema = zod_1.z.object({
     claveCompuesta: zod_1.z.string(),
     cantidad: zod_1.z.number().int().min(1),
     updatedAt: zod_1.z.string().datetime(),
-}).refine((data) => {
+});
+exports.ItemNeumaticoSchema = exports.ItemNeumaticoBaseSchema.refine((data) => {
     const brand = data.marca && data.marca.trim() !== '' ? data.marca.trim() : 'GENERICA';
     const expected = `${data.ancho}/${data.perfil}R${data.llanta}--${brand}`;
     return data.claveCompuesta === expected;
 }, {
     message: 'claveCompuesta debe coincidir con ${ancho}/${perfil}R${llanta}--${marca || GENERICA}',
+});
+exports.ItemInputSchema = zod_1.z.object({
+    llanta: zod_1.z.number().int().min(10).max(30),
+    ancho: zod_1.z.number().int().min(100).max(400),
+    perfil: zod_1.z.number().int().min(20).max(95),
+    marca: zod_1.z.string().optional().default(''),
+    deltaCantidad: zod_1.z.number().int().min(1),
 });
 exports.EvidenciaFotoSchema = zod_1.z.object({
     id: zod_1.z.string().uuid(),

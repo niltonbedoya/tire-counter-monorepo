@@ -4,10 +4,13 @@
   "description": "Estación de Recepción, Servidor de Validación y Simulador Web de Terminal de Patio",
   "main": "src/server.js",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "node src/server.js",
+    "test": "vitest run",
+    "build": "echo \"receptor-desktop: no build step\""
   },
   "dependencies": {
     "@tire-counter/core-contracts": "*",
-    "@tire-counter/mcp-servers": "*"
+    "@tire-counter/mcp-servers": "*",
+    "dotenv": "^18.0.9"
   }
 }

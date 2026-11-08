@@ -3,6 +3,7 @@ const url = require('node:url');
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
+const z = require('zod');
 
 // Import from packages
 const {
@@ -17,6 +18,11 @@ const {
   SQLiteLocalAdapter,
   SupabaseCloudAdapter,
   OfflineFirstHybridRepository,
+  ItemNeumaticoSchema,
+  ItemNeumaticoBaseSchema,
+  ItemInputSchema,
+  EvidenciaFotoSchema,
+  ProyectoContenedorSchema,
 } = require('@tire-counter/core-contracts');
 
 const {
@@ -35,8 +41,14 @@ const {
   checkFileLocks,
 } = require('@tire-counter/mcp-servers');
 
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+require('dotenv').config();
+
 const PORT = process.env.PORT || 3000;
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://eypaqvrvneriioslmqgx.supabase.co';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+if (!SUPABASE_URL) {
+  throw new Error('SUPABASE_URL environment variable is required');
+}
 const SUPABASE_KEY = process.env.SUPABASE_KEY;
 if (!SUPABASE_KEY) {
   throw new Error('SUPABASE_KEY environment variable is required');
@@ -45,6 +57,14 @@ if (!SUPABASE_KEY) {
 const localAdapter = new SQLiteLocalAdapter();
 const cloudAdapter = new SupabaseCloudAdapter({ supabaseUrl: SUPABASE_URL, supabaseKey: SUPABASE_KEY });
 const repo = new OfflineFirstHybridRepository(localAdapter, cloudAdapter);
+
+// Request-body validation schemas
+const FotoInputSchema = z.object({
+  simulatedWidth: z.number().int().positive().optional(),
+  simulatedHeight: z.number().int().positive().optional(),
+});
+
+const DispatchInputSchema = z.object({}).strict();
 
 let activeSessionUser = {
   id: '3612b21e-2693-403b-b6ac-7704a2c4f1e6',
@@ -67,7 +87,7 @@ function logAudit(message, type = 'INFO') {
   if (auditLogs.length > 50) auditLogs.pop();
 }
 
-const initialContainerId = 'cnt-203248';
+const initialContainerId = '550e8400-e29b-41d4-a716-446655440000';
 
 async function seedDemoContainer() {
   await repo.crearContenedor({
@@ -82,7 +102,7 @@ async function seedDemoContainer() {
   });
 
   await repo.guardarItem({
-    id: 'item-seed-1',
+    id: crypto.randomUUID(),
     contenedorId: initialContainerId,
     llanta: 16,
     ancho: 205,
@@ -94,7 +114,7 @@ async function seedDemoContainer() {
   });
 
   await repo.guardarItem({
-    id: 'item-seed-2',
+    id: crypto.randomUUID(),
     contenedorId: initialContainerId,
     llanta: 17,
     ancho: 225,
@@ -106,7 +126,7 @@ async function seedDemoContainer() {
   });
 
   // Seed initial sample reception lot
-  const recId = 'cnt-rec-8012';
+  const recId = '550e8400-e29b-41d4-a716-446655440001';
   await repo.crearContenedor({
     id: recId,
     codigoReferencia: 'Albarán REC-8012',
@@ -119,7 +139,7 @@ async function seedDemoContainer() {
   });
 
   await repo.guardarItem({
-    id: 'item-seed-rec-1',
+    id: crypto.randomUUID(),
     contenedorId: recId,
     llanta: 15,
     ancho: 195,
@@ -1902,16 +1922,29 @@ const server = http.createServer(async (req, res) => {
 
       let body = '';
       for await (const chunk of req) body += chunk;
-      const payload = JSON.parse(body);
+      let payload;
+      try {
+        payload = body ? JSON.parse(body) : {};
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid request body' }));
+        return;
+      }
+      const itemParse = ItemInputSchema.safeParse(payload);
+      if (!itemParse.success) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Item validation failed', violations: itemParse.error.flatten().fieldErrors }));
+        return;
+      }
 
       const items = await repo.obtenerItems(id);
       const result = aggregateItem(items, {
         contenedorId: id,
-        llanta: payload.llanta,
-        ancho: payload.ancho,
-        perfil: payload.perfil,
-        marca: payload.marca,
-        deltaCantidad: payload.deltaCantidad,
+        llanta: itemParse.data.llanta,
+        ancho: itemParse.data.ancho,
+        perfil: itemParse.data.perfil,
+        marca: itemParse.data.marca,
+        deltaCantidad: itemParse.data.deltaCantidad,
       });
 
       // Save updated item in repository
@@ -1961,6 +1994,23 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      let body = '';
+      for await (const chunk of req) body += chunk;
+      let payload;
+      try {
+        payload = body ? JSON.parse(body) : {};
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid request body' }));
+        return;
+      }
+      const fotoParse = FotoInputSchema.safeParse(payload);
+      if (!fotoParse.success) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Foto validation failed', violations: fotoParse.error.flatten().fieldErrors }));
+        return;
+      }
+
       assertContainerMutable(container, 'capturar_foto');
 
       // Simulate capturing raw image and running through processor
@@ -1990,6 +2040,23 @@ const server = http.createServer(async (req, res) => {
       if (!container) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: 'Contenedor no encontrado' }));
+        return;
+      }
+
+      let body = '';
+      for await (const chunk of req) body += chunk;
+      let payload;
+      try {
+        payload = body ? JSON.parse(body) : {};
+      } catch {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Invalid request body' }));
+        return;
+      }
+      const dispatchParse = DispatchInputSchema.safeParse(payload);
+      if (!dispatchParse.success) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: 'Dispatch validation failed', violations: dispatchParse.error.flatten().fieldErrors }));
         return;
       }
 
@@ -2140,6 +2207,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(404, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: 'Ruta no encontrada' }));
   } catch (err) {
+    console.error('Unhandled server error:', err);
     res.writeHead(500, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify({ error: err.message }));
   }

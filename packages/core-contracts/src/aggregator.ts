@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import { UUID, ItemNeumatico, AggregatorInput, AggregatorOutput } from './types';
 
 export function computeCompositeKey(
@@ -60,7 +61,7 @@ export function aggregateItem(
       throw new Error(`No se puede inicializar un item con cantidad menor a 1 (recibido: ${deltaCantidad})`);
     }
     targetItem = {
-      id: `item-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      id: crypto.randomUUID(),
       contenedorId,
       llanta,
       ancho,

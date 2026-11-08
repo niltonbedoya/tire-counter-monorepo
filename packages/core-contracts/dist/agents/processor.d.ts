@@ -9,4 +9,5 @@ export interface ProcessorInput {
 export declare function processImageBuffer(input: ProcessorInput): {
     evidencia: EvidenciaFoto;
     webpBuffer: Buffer;
+    simulado: true;
 };
