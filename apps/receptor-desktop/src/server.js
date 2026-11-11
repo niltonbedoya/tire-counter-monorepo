@@ -573,6 +573,153 @@ const htmlContent = `<!DOCTYPE html>
     .audit-type.SUCCESS { color: #34d399; }
     .audit-type.WARN { color: #fbbf24; }
     .audit-type.ERROR { color: #f87171; }
+
+    /* Segmented Navigation in Admin Tab (Option 2) */
+    .admin-segmented-nav {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 18px;
+      background: #090d16;
+      padding: 5px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    .admin-subtab-btn {
+      flex: 1;
+      min-height: 44px;
+      padding: 8px 14px;
+      background: transparent;
+      color: var(--text-muted);
+      border: none;
+      border-radius: 8px;
+      font-size: 0.9rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      white-space: nowrap;
+      transition: all 0.15s ease;
+    }
+    .admin-subtab-btn:hover {
+      color: #fff;
+      background: #1e293b;
+    }
+    .admin-subtab-btn.active {
+      background: var(--accent);
+      color: #000;
+      font-weight: 900;
+      box-shadow: 0 2px 8px rgba(245, 158, 11, 0.35);
+    }
+    .admin-subtab-btn .badge-pill {
+      background: rgba(0, 0, 0, 0.2);
+      color: inherit;
+      font-size: 0.72rem;
+      padding: 2px 7px;
+      border-radius: 999px;
+      font-weight: 800;
+    }
+    /* Responsive Container Cards Feed */
+    .container-cards-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 14px;
+    }
+    .container-card {
+      background: #131d2e;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      transition: transform 0.1s, border-color 0.15s;
+    }
+    .container-card:hover {
+      border-color: #475569;
+    }
+    .container-card.pending-ack {
+      border-left: 4px solid var(--accent);
+      background: linear-gradient(135deg, rgba(245, 158, 11, 0.05) 0%, #131d2e 100%);
+    }
+    .container-card.purged {
+      border-left: 4px solid #64748b;
+      opacity: 0.92;
+    }
+    .container-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 8px;
+    }
+    .container-card-title {
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 2px;
+    }
+    .container-card-meta {
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .container-card-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      background: #090d16;
+      border: 1px solid #1e293b;
+      border-radius: 8px;
+      padding: 8px 12px;
+    }
+    .card-stat-label {
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .card-stat-val {
+      font-size: 1.25rem;
+      font-weight: 900;
+      color: var(--text);
+    }
+    .container-card-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: auto;
+      padding-top: 6px;
+    }
+    .btn-action-direct {
+      min-height: 40px !important;
+      height: 40px !important;
+      padding: 0 12px !important;
+      font-size: 0.82rem !important;
+      font-weight: 700 !important;
+      border-radius: 6px !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 6px !important;
+      text-decoration: none !important;
+      white-space: nowrap !important;
+      flex: 1 1 auto;
+      cursor: pointer;
+    }
+    .btn-pulse-green {
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
   </style>
 </head>
 <body>
@@ -831,86 +978,124 @@ const htmlContent = `<!DOCTYPE html>
       </div>
     </section>
 
-    <!-- TAB 2: ADMIN (SUPERVISOR & INVENTARIO) -->
+    <!-- TAB 2: ADMIN (SUPERVISOR & INVENTARIO CON CONTROL SEGMENTADO - OPCION 2) -->
     <section id="tab-supervisor" style="display: none;">
-      <!-- Tarjeta 1: Inventario General de Almacén en Admin -->
-      <div class="card" style="border-top: 4px solid var(--success); margin-bottom: 16px;">
-        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <div>
-            <span id="txt-admin-stock-title" style="color: var(--success); font-weight: 800;">📊 Inventario General de Almacén</span>
-            <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">Stock permanente consolidado en almacén</div>
-          </div>
-          <button class="touch-btn btn-secondary" style="min-height: 36px; font-size: 0.82rem; padding: 0 12px;" onclick="loadSupervisorView()">🔄 Actualizar</button>
-        </div>
+      <!-- Control Segmentado Superior (Opción 2: Maestro-Detalle) -->
+      <div class="admin-segmented-nav">
+        <button class="admin-subtab-btn active" id="subtab-btn-batches" onclick="switchAdminSubtab('batches')">
+          📦 <span>Lotes & Despachos</span> <span class="badge-pill" id="badge-batches-count">0</span>
+        </button>
+        <button class="admin-subtab-btn" id="subtab-btn-stock" onclick="switchAdminSubtab('stock')">
+          📊 <span>Inventario Almacén</span> <span class="badge-pill" id="badge-stock-count">0</span>
+        </button>
+        <button class="admin-subtab-btn" id="subtab-btn-audit" onclick="switchAdminSubtab('audit')">
+          🛡️ <span>Auditoría & Logs</span>
+        </button>
+      </div>
 
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 12px;">
-          <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Total Neumáticos</div>
-            <div id="stat-admin-total-tires" style="font-size: 1.5rem; font-weight: 900; color: var(--success);">0</div>
+      <!-- SUB-PANEL 1: LOTES & DESPACHOS (CARD FEED RESPONSIVE) -->
+      <div id="admin-panel-batches" class="admin-subpanel">
+        <div class="card" style="border-top: 4px solid var(--accent); margin-bottom: 16px;">
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span id="txt-supervisor-title" style="font-weight: 800;">Lotes y Despachos</span>
+              <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: normal; margin-left: 6px;">• Acceso directo a Excel, Matriz Web y Validación</span>
+            </div>
+            <button class="touch-btn btn-secondary" style="min-height: 36px; font-size: 0.82rem; padding: 0 12px;" onclick="loadSupervisorView()">🔄 Actualizar</button>
           </div>
-          <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Medidas en Stock</div>
-            <div id="stat-admin-distinct-sizes" style="font-size: 1.5rem; font-weight: 900; color: var(--accent-blue);">0</div>
-          </div>
-          <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 10px; text-align: center;">
-            <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Lotes Activos</div>
-            <div id="stat-admin-active-batches" style="font-size: 1.5rem; font-weight: 900; color: var(--accent);">0</div>
-          </div>
-        </div>
 
-        <div style="max-height: 220px; overflow-y: auto;">
-          <table style="width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                <th style="width: 45%;">Medida</th>
-                <th style="width: 25%; text-align: center;">Cantidad</th>
-                <th style="width: 30%; text-align: right;">Último Movimiento</th>
-              </tr>
-            </thead>
-            <tbody id="tbl-admin-stock">
-              <!-- Se llena dinámicamente -->
-            </tbody>
-          </table>
+          <!-- Feed de Tarjetas Adaptativas (Responsive Mobile/Tablet/Web con Cero Botones Ocultos) -->
+          <div id="cards-supervisor-containers" class="container-cards-grid">
+            <!-- Se llena dinámicamente -->
+          </div>
+
+          <!-- Tabla oculta para compatibilidad DOM -->
+          <div style="display: none;">
+            <table id="tbl-supervisor-containers"></table>
+          </div>
         </div>
       </div>
 
-      <!-- Tarjeta 2: Gestión de Lotes y Despachos -->
-      <div class="card" style="border-top: 4px solid var(--accent);">
-        <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
-          <div>
-            <span id="txt-supervisor-title" style="font-weight: 800;">Panel Admin</span>
-            <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: normal; margin-left: 6px;">• Lotes, Despachos y Entradas</span>
+      <!-- SUB-PANEL 2: INVENTARIO GENERAL DE ALMACÉN -->
+      <div id="admin-panel-stock" class="admin-subpanel" style="display: none;">
+        <div class="card" style="border-top: 4px solid var(--success); margin-bottom: 16px;">
+          <div class="card-title" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px;">
+            <div>
+              <span id="txt-admin-stock-title" style="color: var(--success); font-weight: 800;">📊 Inventario General de Almacén</span>
+              <div style="font-size: 0.8rem; color: var(--text-muted); font-weight: normal; margin-top: 2px;">Stock permanente consolidado en almacén</div>
+            </div>
+            <button class="touch-btn btn-secondary" style="min-height: 36px; font-size: 0.82rem; padding: 0 12px;" onclick="loadSupervisorView()">🔄 Actualizar</button>
           </div>
-          <button class="touch-btn btn-secondary" id="btn-refresh-supervisor" style="min-height: 36px; font-size: 0.82rem; padding: 0 10px;" onclick="loadSupervisorView()">🔄</button>
-        </div>
 
-        <div style="overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%;">
-          <table style="min-width: 600px; width: 100%; border-collapse: collapse;">
-            <thead>
-              <tr>
-                <th id="th-sup-code" style="width: 30%; min-width: 140px;">Lote</th>
-                <th id="th-sup-operator" style="width: 22%; min-width: 110px;">Operario</th>
-                <th id="th-sup-total" style="width: 14%; min-width: 70px; text-align: center;">Total</th>
-                <th id="th-sup-status" style="width: 16%; min-width: 100px; text-align: center;">Estado</th>
-                <th id="th-sup-actions" style="width: 18%; min-width: 140px; text-align: right; padding-right: 12px;">Acción</th>
-              </tr>
-            </thead>
-            <tbody id="tbl-supervisor-containers">
-              <!-- Se llena dinámicamente -->
-            </tbody>
-          </table>
+          <!-- KPIs de Stock -->
+          <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-bottom: 14px;">
+            <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Total Neumáticos</div>
+              <div id="stat-admin-total-tires" style="font-size: 1.8rem; font-weight: 900; color: var(--success);">0</div>
+            </div>
+            <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Medidas en Stock</div>
+              <div id="stat-admin-distinct-sizes" style="font-size: 1.8rem; font-weight: 900; color: var(--accent-blue);">0</div>
+            </div>
+            <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; text-align: center;">
+              <div style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; font-weight: 700;">Lotes Activos</div>
+              <div id="stat-admin-active-batches" style="font-size: 1.8rem; font-weight: 900; color: var(--accent);">0</div>
+            </div>
+          </div>
+
+          <!-- Buscador de medidas rápido -->
+          <div style="margin-bottom: 12px;">
+            <input type="text" id="input-stock-search" placeholder="🔍 Filtrar por medida (ej: 205, 55, 16)..." oninput="filterStockTable(this.value)" style="width: 100%; padding: 10px 14px; background: #0f172a; border: 1px solid var(--border); border-radius: 8px; color: #fff; font-size: 0.95rem;">
+          </div>
+
+          <!-- Tabla de Stock -->
+          <div style="max-height: 400px; overflow-y: auto;">
+            <table style="width: 100%; border-collapse: collapse;">
+              <thead>
+                <tr>
+                  <th style="width: 45%;">Medida</th>
+                  <th style="width: 25%; text-align: center;">Cantidad</th>
+                  <th style="width: 30%; text-align: right;">Último Movimiento</th>
+                </tr>
+              </thead>
+              <tbody id="tbl-admin-stock">
+                <!-- Se llena dinámicamente -->
+              </tbody>
+            </table>
+          </div>
         </div>
       </div>
 
-      <div class="card" id="card-manifest-preview" style="display: none; margin-top: 16px;">
-        <div class="card-title">
-          <span id="txt-inspection-title">Manifiesto & ZIP</span>
-          <div>
-            <a id="lnk-download-xlsx" href="#" class="touch-btn btn-cyan" style="min-height: 36px; font-size: 0.8rem; text-decoration: none; padding: 0 10px;">📥 .xlsx</a>
-            <a id="lnk-download-zip" href="#" class="touch-btn btn-action" style="min-height: 36px; font-size: 0.8rem; text-decoration: none; padding: 0 10px; margin-left: 6px;">📦 .zip</a>
+      <!-- SUB-PANEL 3: AUDITORÍA & LOGS INTEGRADO -->
+      <div id="admin-panel-audit" class="admin-subpanel" style="display: none;">
+        <div class="grid-2">
+          <div class="card" style="border-top: 4px solid var(--accent-blue);">
+            <div class="card-title">
+              <span id="txt-mcp-title">Servidores MCP de Auditoría</span>
+              <button class="touch-btn btn-cyan" id="btn-mcp-battery" style="min-height: 36px; font-size: 0.82rem; padding: 0 12px;" onclick="runAllMCPAudits()">⚡ Test Completo</button>
+            </div>
+            <div id="mcp-results" data-ran="false" style="font-size: 0.88rem; line-height: 1.5;">
+              Presione 'Test' para verificar los 4 servidores MCP.
+            </div>
+          </div>
+
+          <div class="card" style="border-top: 4px solid #64748b;">
+            <div class="card-title">
+              <span id="txt-audit-log-title">Log de Eventos y Purga</span>
+              <button class="touch-btn btn-secondary" style="min-height: 32px; font-size: 0.78rem; padding: 0 10px;" onclick="loadAuditLogs()">🔄</button>
+            </div>
+            <div class="audit-box" id="audit-log-stream">
+              <!-- Se llena dinámicamente -->
+            </div>
           </div>
         </div>
-        <div id="manifest-details" style="font-family: monospace; font-size: 0.88rem; line-height: 1.5; color: #cbd5e1;"></div>
+      </div>
+
+      <!-- Tarjeta invisible para preservar retrocompatibilidad -->
+      <div class="card" id="card-manifest-preview" style="display: none;">
+        <a id="lnk-download-xlsx" href="#"></a>
+        <a id="lnk-download-zip" href="#"></a>
+        <div id="manifest-details"></div>
       </div>
     </section>
 
@@ -994,6 +1179,73 @@ const htmlContent = `<!DOCTYPE html>
         </div>
       </div>
     </div>
+
+    <!-- Modal Éxito tras Validar Tic (Descarga inmediata de Excel y ZIP) -->
+    <div id="modal-validation-success" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10001; align-items: center; justify-content: center; padding: 16px;">
+      <div style="background: #1e293b; border: 2px solid var(--success); border-radius: 14px; width: 100%; max-width: 480px; padding: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.8); text-align: center;">
+        <div style="font-size: 3rem; margin-bottom: 10px;">✅</div>
+        <h3 style="font-size: 1.35rem; font-weight: 800; color: #fff; margin-bottom: 6px;">¡Lote Validado y Aceptado!</h3>
+        <p style="font-size: 0.88rem; color: #cbd5e1; margin-bottom: 16px;">
+          El contenedor ha sido confirmado con el 'Tic' de supervisión. Las fotografías locales han sido purgadas de forma segura y el estado final es <strong>PURGADO</strong>.
+        </p>
+
+        <div style="background: #0f172a; border: 1px solid var(--border); border-radius: 8px; padding: 12px; margin-bottom: 18px; text-align: left; font-family: monospace; font-size: 0.8rem; color: #94a3b8;">
+          <div style="color: #cbd5e1; margin-bottom: 4px;"><strong>Contenedor:</strong> <span id="lbl-val-container-code" style="color: var(--accent);">--</span></div>
+          <div><strong>Token ACK:</strong> <span id="lbl-val-ack-token" style="color: var(--success); word-break: break-all;">--</span></div>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+          <a id="btn-val-download-excel" href="#" class="touch-btn btn-action" style="min-height: 48px; font-size: 0.95rem; text-decoration: none; border-radius: 8px; font-weight: 800; display: flex; align-items: center; justify-content: center; gap: 8px;" download>
+            📥 Descargar Packing List (.xlsx)
+          </a>
+          <button id="btn-val-view-matrix" class="touch-btn btn-cyan" style="min-height: 44px; font-size: 0.9rem; border-radius: 8px; font-weight: 700;" onclick="closeValidationSuccessModal(); openWebMatrixModal(lastValidatedContainerId);">
+            👁️ Ver Matriz Web en Pantalla
+          </button>
+          <a id="btn-val-download-zip" href="#" class="touch-btn btn-secondary" style="min-height: 40px; font-size: 0.85rem; text-decoration: none; border-radius: 8px; display: flex; align-items: center; justify-content: center; gap: 6px;" download>
+            📦 Descargar Paquete ZIP
+          </a>
+        </div>
+
+        <button class="touch-btn btn-secondary" style="width: 100%; min-height: 38px; font-size: 0.85rem; border-radius: 6px;" onclick="closeValidationSuccessModal()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+
+    <!-- Modal Visor Web Avanzado de la Matriz de Neumáticos (Para ver la lista en la web) -->
+    <div id="modal-web-matrix" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.85); z-index: 10002; align-items: center; justify-content: center; padding: 12px;">
+      <div style="background: #1e293b; border: 2px solid var(--accent-blue); border-radius: 12px; width: 100%; max-width: 860px; max-height: 92vh; display: flex; flex-direction: column; overflow: hidden; box-shadow: 0 20px 60px rgba(0,0,0,0.9);">
+        
+        <!-- Modal Top Bar -->
+        <div style="background: #0f172a; padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span class="badge" style="background: var(--accent-blue); color: #000; font-weight: 900;">PACKING LIST</span>
+            <h3 id="matrix-modal-title" style="font-size: 1.1rem; font-weight: 800; color: #fff; margin: 0;">--</h3>
+          </div>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <a id="btn-modal-matrix-download" href="#" class="touch-btn btn-action" style="min-height: 36px; height: 36px; font-size: 0.82rem; padding: 0 14px; text-decoration: none; border-radius: 6px; font-weight: 800; display: inline-flex; align-items: center; gap: 6px;" download>
+              📥 Descargar .xlsx
+            </a>
+            <button class="touch-btn btn-secondary" style="min-height: 36px; height: 36px; width: 36px; font-size: 1rem; border-radius: 6px; padding: 0;" onclick="closeWebMatrixModal()">✕</button>
+          </div>
+        </div>
+
+        <!-- Modal Nav Tabs: Visual Matrix vs Detailed Table -->
+        <div style="display: flex; background: #0b1120; border-bottom: 1px solid var(--border); padding: 0 16px;">
+          <button class="tab-btn active" id="btn-matrix-tab-visual" onclick="switchMatrixViewMode('visual')" style="padding: 10px 14px; font-size: 0.85rem;">
+            🖼️ Matriz Visual
+          </button>
+          <button class="tab-btn" id="btn-matrix-tab-detail" onclick="switchMatrixViewMode('detail')" style="padding: 10px 14px; font-size: 0.85rem;">
+            📋 Detalle Técnico (ERP/Aduanas)
+          </button>
+        </div>
+
+        <!-- Modal Body (Scrollable) -->
+        <div id="web-matrix-content" style="padding: 16px; overflow-y: auto; flex: 1;">
+          <!-- Se llena dinámicamente -->
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
@@ -1004,6 +1256,10 @@ const htmlContent = `<!DOCTYPE html>
     let currentRim = 16;
     let currentWidth = 205;
     let currentProfile = 55;
+    let lastValidatedContainerId = '';
+    let cachedStockList = [];
+    let currentMatrixContainerData = null;
+    let currentMatrixMode = 'visual';
 
     const i18nDicts = ${JSON.stringify(DICTIONARIES)};
 
@@ -1172,6 +1428,7 @@ const htmlContent = `<!DOCTYPE html>
     async function loadStockTable() {
       const res = await fetch('/api/stock');
       const stock = await res.json();
+      cachedStockList = stock || [];
       
       let totalStock = 0;
       let rowsHtml = '';
@@ -1201,6 +1458,34 @@ const htmlContent = `<!DOCTYPE html>
 
       const elSizes = document.getElementById('stat-admin-distinct-sizes');
       if (elSizes) elSizes.innerText = stock ? stock.length : 0;
+
+      const badgeStock = document.getElementById('badge-stock-count');
+      if (badgeStock) badgeStock.innerText = totalStock;
+    }
+
+    function filterStockTable(query) {
+      const q = (query || '').trim().toLowerCase();
+      const filtered = q ? cachedStockList.filter(s => {
+        const measure = (s.ancho + '/' + s.perfil + 'r' + s.llanta).toLowerCase();
+        return measure.includes(q) || String(s.llanta).includes(q) || String(s.ancho).includes(q) || String(s.perfil).includes(q);
+      }) : cachedStockList;
+
+      let rowsHtml = '';
+      if (filtered.length === 0) {
+        rowsHtml = '<tr><td colspan="3" style="text-align:center; color:var(--text-muted); padding:12px;">No se encontraron medidas coincidentes</td></tr>';
+      } else {
+        filtered.forEach(s => {
+          rowsHtml += \`
+            <tr style="border-bottom: 1px solid var(--border);">
+              <td style="padding: 10px 8px;"><strong style="color:#fff; font-size:0.95rem;">\${s.ancho}/\${s.perfil}R\${s.llanta}</strong></td>
+              <td style="padding: 10px 8px; text-align:center;"><span style="font-size:1.2rem; font-weight:900; color:var(--success);">\${s.cantidadTotal}</span></td>
+              <td style="padding: 10px 8px; text-align:right; font-size:0.75rem; color:var(--text-muted);">\${new Date(s.updatedAt).toLocaleTimeString()}</td>
+            </tr>
+          \`;
+        });
+      }
+      const tbodyAdmin = document.getElementById('tbl-admin-stock');
+      if (tbodyAdmin) tbodyAdmin.innerHTML = rowsHtml;
     }
 
     function setLang(lang) {
@@ -1615,6 +1900,20 @@ const htmlContent = `<!DOCTYPE html>
       }
     }
 
+    function switchAdminSubtab(subtabId) {
+      document.querySelectorAll('.admin-subtab-btn').forEach(btn => btn.classList.remove('active'));
+      document.querySelectorAll('.admin-subpanel').forEach(p => p.style.display = 'none');
+
+      const btn = document.getElementById('subtab-btn-' + subtabId);
+      if (btn) btn.classList.add('active');
+
+      const panel = document.getElementById('admin-panel-' + subtabId);
+      if (panel) panel.style.display = 'block';
+
+      if (subtabId === 'stock') loadStockTable();
+      if (subtabId === 'audit') loadAuditLogs();
+    }
+
     async function loadSupervisorView() {
       const res = await fetch('/api/contenedores');
       const containers = await res.json();
@@ -1625,87 +1924,378 @@ const htmlContent = `<!DOCTYPE html>
         elActive.innerText = containers.filter(c => c.estado === 'ACTIVO' || c.estado === 'DESPACHADO_PENDIENTE_ACK').length;
       }
 
+      const badgeBatches = document.getElementById('badge-batches-count');
+      if (badgeBatches) badgeBatches.innerText = containers.length;
+
+      // 1. Render Responsive Card Feed (Cero botones ocultos, directo y táctil)
+      const cardsGrid = document.getElementById('cards-supervisor-containers');
+      if (cardsGrid) {
+        cardsGrid.innerHTML = '';
+        containers.forEach(c => {
+          const canValidate = c.estado === 'DESPACHADO_PENDIENTE_ACK';
+          const isPurged = c.estado === 'PURGADO';
+          const statusKey = 'status_' + c.estado.toLowerCase();
+          const translatedStatus = (t.vault && t.vault[statusKey]) || c.estado;
+          const opIcon = c.tipoOperacion === 'RECEPCION' ? '📥' : '🚀';
+          const opTypeLabel = c.tipoOperacion === 'RECEPCION' ? 'Entrada Almacén' : 'Despacho';
+
+          const card = document.createElement('div');
+          card.className = 'container-card ' + (canValidate ? 'pending-ack' : (isPurged ? 'purged' : ''));
+          card.innerHTML = \`
+            <div class="container-card-header">
+              <div>
+                <div class="container-card-title">\${c.codigoReferencia}</div>
+                <div class="container-card-meta">
+                  <span>\${opIcon} \${opTypeLabel}</span>
+                  \${c.hashSha256Paquete ? '<span style="color:var(--success); font-weight:700;">• 🔒 SHA OK</span>' : ''}
+                  <span>• Operario: \${c.nombreOperarioSnapshot}</span>
+                </div>
+              </div>
+              <span class="status-badge status-\${c.estado}">\${translatedStatus}</span>
+            </div>
+
+            <div class="container-card-stats">
+              <div>
+                <div class="card-stat-label">Total Piezas</div>
+                <div class="card-stat-val" style="color:var(--accent);">\${c.totalAcumulado} <span style="font-size:0.75rem; font-weight:normal; color:var(--text-muted);">\${t.supervisor.unit_tires}</span></div>
+              </div>
+              <div>
+                <div class="card-stat-label">Actualizado</div>
+                <div class="card-stat-val" style="font-size:0.95rem; font-weight:600; color:#cbd5e1; margin-top:4px;">\${new Date(c.updatedAt).toLocaleTimeString()}</div>
+              </div>
+            </div>
+
+            <div class="container-card-actions">
+              <!-- BOTÓN DIRECTO 1: DESCARGA EXCEL INMEDIATA A 1 CLIC -->
+              <a href="/api/contenedores/\${c.id}/download-xlsx" class="touch-btn btn-cyan btn-action-direct" download title="Descargar hoja Excel (.xlsx) con matriz y detalle">
+                📥 Descargar Excel
+              </a>
+
+              <!-- BOTÓN DIRECTO 2: VISTA WEB DE LA MATRIZ AVANZADA -->
+              <button class="touch-btn btn-secondary btn-action-direct" onclick="openWebMatrixModal('\${c.id}')" title="Ver matriz visual de rodados en pantalla">
+                👁️ Matriz Web
+              </button>
+
+              <!-- BOTÓN DIRECTO 3: DESCARGA ZIP CON FOTOS (SI EXISTE) -->
+              \${c.hashSha256Paquete ? \`
+                <a href="/api/contenedores/\${c.id}/download-zip" class="touch-btn btn-secondary btn-action-direct" download title="Descargar paquete ZIP con fotografías">
+                  📦 ZIP
+                </a>
+              \` : ''}
+
+              <!-- BOTÓN DIRECTO 4: VALIDAR CON TIC (RESALTADO SI REQUIERE VALIDACIÓN) -->
+              \${canValidate ? \`
+                <button class="touch-btn btn-success btn-action-direct btn-pulse-green" onclick="validateWithTick('\${c.id}', '\${c.codigoReferencia}')" title="Confirmar recepción / despacho y purgar fotos locales">
+                  ✅ Aceptar ('Tic')
+                </button>
+              \` : ''}
+            </div>
+          \`;
+          cardsGrid.appendChild(card);
+        });
+      }
+
       const tbody = document.getElementById('tbl-supervisor-containers');
-      tbody.innerHTML = '';
-
-      containers.forEach(c => {
-        const tr = document.createElement('tr');
-        tr.style.cssText = 'border-bottom: 1px solid var(--border);';
-        const canValidate = c.estado === 'DESPACHADO_PENDIENTE_ACK';
-        const hasHash = !!c.hashSha256Paquete;
-        const statusKey = 'status_' + c.estado.toLowerCase();
-        const translatedStatus = (t.vault && t.vault[statusKey]) || c.estado;
-        const opIcon = c.tipoOperacion === 'RECEPCION' ? '📥' : '🚀';
-        const opTypeLabel = c.tipoOperacion === 'RECEPCION' 
-          ? (t.hub ? t.hub.new_receive_modal_title : 'Entrada Almacén') 
-          : 'Despacho';
-        const hashIndicator = hasHash ? '<span title="' + c.hashSha256Paquete + '" style="color:var(--success); font-size:0.72rem; margin-left:4px;">• 🔒 SHA OK</span>' : '';
-
-        tr.innerHTML = \`
-          <td style="padding: 10px 8px;">
-            <strong style="color:#fff; font-size:0.95rem;">\${c.codigoReferencia}</strong>
-            <div style="font-size:0.75rem; color:var(--text-muted); margin-top:2px;">
-              \${opIcon} \${opTypeLabel} \${hashIndicator}
-            </div>
-          </td>
-          <td style="padding: 10px 8px; color:#cbd5e1; font-size:0.85rem;">\${c.nombreOperarioSnapshot}</td>
-          <td style="padding: 10px 8px; text-align: center;">
-            <span style="font-size:1.15rem; font-weight:900; color:var(--accent);">\${c.totalAcumulado}</span>
-            <span style="font-size:0.7rem; color:var(--text-muted); display:block;">\${t.supervisor.unit_tires}</span>
-          </td>
-          <td style="padding: 10px 8px; text-align: center;">
-            <span class="status-badge status-\${c.estado}">\${translatedStatus}</span>
-          </td>
-          <td style="padding: 10px 8px; text-align: right; white-space: nowrap;">
-            <div style="display: inline-flex; align-items: center; justify-content: flex-end; gap: 6px;">
-              <button class="touch-btn btn-cyan" style="min-height:34px; height:34px; font-size:0.8rem; padding:0 10px; white-space:nowrap;" onclick="inspectManifest('\${c.id}')">\${t.supervisor.btn_inspect}</button>
-              <button class="touch-btn btn-success" style="min-height:34px; height:34px; font-size:0.8rem; padding:0 10px; white-space:nowrap;" onclick="validateWithTick('\${c.id}')" \${canValidate ? '' : 'disabled'}>\${t.supervisor.btn_validate_tick}</button>
-            </div>
-          </td>
-        \`;
-        tbody.appendChild(tr);
-      });
+      if (tbody) {
+        tbody.innerHTML = '';
+        containers.forEach(c => {
+          const tr = document.createElement('tr');
+          const canValidate = c.estado === 'DESPACHADO_PENDIENTE_ACK';
+          const statusKey = 'status_' + c.estado.toLowerCase();
+          const translatedStatus = (t.vault && t.vault[statusKey]) || c.estado;
+          tr.innerHTML = \`
+            <td>\${c.codigoReferencia}</td>
+            <td>\${c.nombreOperarioSnapshot}</td>
+            <td>\${c.totalAcumulado}</td>
+            <td>\${translatedStatus}</td>
+            <td>
+              <a href="/api/contenedores/\${c.id}/download-xlsx" download>Excel</a>
+              <button onclick="openWebMatrixModal('\${c.id}')">Ver</button>
+              \${canValidate ? \`<button onclick="validateWithTick('\${c.id}', '\${c.codigoReferencia}')">Tic</button>\` : ''}
+            </td>
+          \`;
+          tbody.appendChild(tr);
+        });
+      }
 
       loadStockTable();
     }
 
     async function inspectManifest(id) {
-      const res = await fetch('/api/contenedores/' + id);
-      const data = await res.json();
-      const t = i18nDicts[currentLang] || i18nDicts.es;
+      openWebMatrixModal(id);
 
-      const card = document.getElementById('card-manifest-preview');
-      card.style.display = 'block';
+      try {
+        const res = await fetch('/api/contenedores/' + id);
+        const data = await res.json();
+        const t = i18nDicts[currentLang] || i18nDicts.es;
 
-      document.getElementById('lnk-download-xlsx').href = '/api/contenedores/' + id + '/download-xlsx';
-      document.getElementById('lnk-download-zip').href = '/api/contenedores/' + id + '/download-zip';
+        const card = document.getElementById('card-manifest-preview');
+        if (card) {
+          card.style.display = 'block';
 
-      const statusKey = 'status_' + data.container.estado.toLowerCase();
-      const translatedStatus = (t.vault && t.vault[statusKey]) || data.container.estado;
+          const lnkX = document.getElementById('lnk-download-xlsx');
+          const lnkZ = document.getElementById('lnk-download-zip');
+          if (lnkX) lnkX.href = '/api/contenedores/' + id + '/download-xlsx';
+          if (lnkZ) lnkZ.href = '/api/contenedores/' + id + '/download-zip';
 
-      const details = document.getElementById('manifest-details');
-      details.innerHTML = \`
-        <div><strong>\${t.supervisor.lbl_batch}</strong> \${data.container.codigoReferencia} | <strong>\${t.supervisor.lbl_operator}</strong> \${data.container.nombreOperarioSnapshot}</div>
-        <div><strong>\${t.supervisor.lbl_accumulated}</strong> \${data.container.totalAcumulado} \${t.supervisor.unit_tires}</div>
-        <div><strong>\${t.supervisor.lbl_fsm_state}</strong> \${translatedStatus}</div>
-        <div><strong>\${t.supervisor.lbl_hash}</strong> \${data.container.hashSha256Paquete || t.supervisor.pending}</div>
-        <div><strong>\${t.supervisor.lbl_distinct_lines}</strong> \${data.items.length}</div>
-        <div><strong>\${t.supervisor.lbl_photos_vault}</strong> \${data.fotos.length}</div>
-      \`;
+          const statusKey = 'status_' + data.container.estado.toLowerCase();
+          const translatedStatus = (t.vault && t.vault[statusKey]) || data.container.estado;
+
+          const details = document.getElementById('manifest-details');
+          if (details) {
+            details.innerHTML = \`
+              <div><strong>\${t.supervisor.lbl_batch}</strong> \${data.container.codigoReferencia} | <strong>\${t.supervisor.lbl_operator}</strong> \${data.container.nombreOperarioSnapshot}</div>
+              <div><strong>\${t.supervisor.lbl_accumulated}</strong> \${data.container.totalAcumulado} \${t.supervisor.unit_tires}</div>
+              <div><strong>\${t.supervisor.lbl_fsm_state}</strong> \${translatedStatus}</div>
+              <div><strong>\${t.supervisor.lbl_hash}</strong> \${data.container.hashSha256Paquete || t.supervisor.pending}</div>
+              <div><strong>\${t.supervisor.lbl_distinct_lines}</strong> \${data.items.length}</div>
+              <div><strong>\${t.supervisor.lbl_photos_vault}</strong> \${data.fotos.length}</div>
+            \`;
+          }
+        }
+      } catch (e) {
+        console.warn('Inspect manifest fallback:', e);
+      }
     }
 
-    async function validateWithTick(id) {
+    async function validateWithTick(id, code) {
       const t = i18nDicts[currentLang] || i18nDicts.es;
-      if (!confirm(t.supervisor.confirm_tick)) return;
+      if (!confirm(t.supervisor.confirm_tick || '¿Confirmar la recepción del contenedor y generar el token ACK?')) return;
 
-      const res = await fetch('/api/contenedores/' + id + '/validar-tic', { method: 'POST' });
-      const data = await res.json();
-      if (res.ok) {
-        alert('Lote validado con éxito.\\nToken ACK generado: ' + data.ackToken.sha256Verificado.substring(0, 16) + '...\\nFotos locales purgadas automáticamente.\\nEstado final: PURGADO');
-        loadSupervisorView();
-        loadTerminalData();
+      try {
+        const res = await fetch('/api/contenedores/' + id + '/validar-tic', { method: 'POST' });
+        const data = await res.json();
+        if (res.ok) {
+          lastValidatedContainerId = id;
+          showValidationSuccessModal(id, code || id, data.ackToken);
+          triggerAutoDownload('/api/contenedores/' + id + '/download-xlsx');
+          loadSupervisorView();
+          loadTerminalData();
+        } else {
+          alert(data.error || 'Error al validar el lote');
+        }
+      } catch (err) {
+        alert('Error de conexión al validar contenedor: ' + err.message);
+      }
+    }
+
+    function showValidationSuccessModal(id, code, ackToken) {
+      lastValidatedContainerId = id;
+      const modal = document.getElementById('modal-validation-success');
+      const lblCode = document.getElementById('lbl-val-container-code');
+      const lblAck = document.getElementById('lbl-val-ack-token');
+      const btnExcel = document.getElementById('btn-val-download-excel');
+      const btnZip = document.getElementById('btn-val-download-zip');
+
+      if (lblCode) lblCode.innerText = code || id;
+      if (lblAck) lblAck.innerText = ackToken && ackToken.sha256Verificado ? ackToken.sha256Verificado : (typeof ackToken === 'string' ? ackToken : 'CONFIRMADO');
+      if (btnExcel) btnExcel.href = '/api/contenedores/' + id + '/download-xlsx';
+      if (btnZip) btnZip.href = '/api/contenedores/' + id + '/download-zip';
+
+      if (modal) modal.style.display = 'flex';
+    }
+
+    function closeValidationSuccessModal() {
+      const modal = document.getElementById('modal-validation-success');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function triggerAutoDownload(url) {
+      try {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch (e) {
+        console.warn('Auto download error:', e);
+      }
+    }
+
+    let currentMatrixData = null;
+    let currentMatrixViewMode = 'visual';
+
+    async function openWebMatrixModal(id) {
+      try {
+        const res = await fetch('/api/contenedores/' + id);
+        if (!res.ok) throw new Error('No se pudo obtener información del contenedor');
+        const data = await res.json();
+        currentMatrixData = data;
+        lastValidatedContainerId = id;
+
+        const modal = document.getElementById('modal-web-matrix');
+        const title = document.getElementById('matrix-modal-title');
+        const dlBtn = document.getElementById('btn-modal-matrix-download');
+
+        if (title) title.innerText = data.container.codigoReferencia + ' — Total: ' + data.container.totalAcumulado + ' uds';
+        if (dlBtn) dlBtn.href = '/api/contenedores/' + id + '/download-xlsx';
+
+        currentMatrixViewMode = 'visual';
+        updateMatrixTabStyles();
+        renderMatrixModalView();
+
+        if (modal) modal.style.display = 'flex';
+      } catch (err) {
+        alert('Error al abrir la matriz web: ' + err.message);
+      }
+    }
+
+    function closeWebMatrixModal() {
+      const modal = document.getElementById('modal-web-matrix');
+      if (modal) modal.style.display = 'none';
+    }
+
+    function switchMatrixViewMode(mode) {
+      currentMatrixViewMode = mode;
+      updateMatrixTabStyles();
+      renderMatrixModalView();
+    }
+
+    function updateMatrixTabStyles() {
+      const btnVis = document.getElementById('btn-matrix-tab-visual');
+      const btnDet = document.getElementById('btn-matrix-tab-detail');
+      if (btnVis) {
+        btnVis.className = currentMatrixViewMode === 'visual' ? 'tab-btn active' : 'tab-btn';
+      }
+      if (btnDet) {
+        btnDet.className = currentMatrixViewMode === 'detail' ? 'tab-btn active' : 'tab-btn';
+      }
+    }
+
+    function renderMatrixModalView() {
+      const container = document.getElementById('web-matrix-content');
+      if (!container || !currentMatrixData) return;
+
+      const items = currentMatrixData.items || [];
+      const cont = currentMatrixData.container;
+
+      if (currentMatrixViewMode === 'visual') {
+        const groupsDef = [
+          { title: '12, 13, 14', filter: (r) => r <= 14 },
+          { title: '16', filter: (r) => r === 16 },
+          { title: '18 - 19', filter: (r) => r === 18 || r === 19 },
+          { title: '15', filter: (r) => r === 15 },
+          { title: '17', filter: (r) => r === 17 },
+          { title: '20+', filter: (r) => r >= 20 },
+        ];
+
+        let html = \`
+          <div style="background:#e05243; color:#fff; text-align:center; padding:10px 14px; border-radius:6px; margin-bottom:14px; font-weight:800; letter-spacing:1px; box-shadow: 0 4px 12px rgba(224,82,67,0.3);">
+            <div style="font-size:1.1rem; text-transform:uppercase;">CHECKIN. \${cont.codigoReferencia}</div>
+            <div style="font-size:0.85rem; font-weight:600; opacity:0.95;">LOTE \${cont.codigoReferencia} (\${new Date().toLocaleDateString()})</div>
+          </div>
+
+          <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:12px; margin-bottom:16px;">
+        \`;
+
+        groupsDef.forEach(g => {
+          const groupItems = items.filter(it => g.filter(it.llanta));
+          groupItems.sort((a, b) => {
+            if (a.ancho !== b.ancho) return a.ancho - b.ancho;
+            if (a.perfil !== b.perfil) return a.perfil - b.perfil;
+            return a.llanta - b.llanta;
+          });
+
+          const groupTotal = groupItems.reduce((acc, cur) => acc + cur.cantidad, 0);
+
+          html += \`
+            <div style="background:#0f172a; border:1px solid #334155; border-radius:8px; overflow:hidden; display:flex; flex-direction:column;">
+              <div style="background:#1e293b; text-align:center; padding:8px; font-weight:900; font-size:1rem; color:#f8fafc; border-bottom:2px solid #475569;">
+                R-\${g.title}
+              </div>
+              <div style="flex:1; max-height:280px; overflow-y:auto;">
+                <table style="width:100%; border-collapse:collapse; font-size:0.85rem;">
+                  <tbody>
+          \`;
+
+          if (groupItems.length === 0) {
+            html += \`<tr><td colspan="2" style="text-align:center; padding:14px; color:#64748b; font-style:italic;">Sin neumáticos</td></tr>\`;
+          } else {
+            groupItems.forEach((item, idx) => {
+              const bg = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+              const sizeLabel = item.ancho + ' ' + item.perfil + ' ' + item.llanta;
+              html += \`
+                <tr style="background:\${bg}; border-bottom:1px solid rgba(255,255,255,0.05);">
+                  <td style="padding:6px 10px; font-family:monospace; font-weight:700; color:#f1f5f9;">\${sizeLabel}</td>
+                  <td style="padding:6px 10px; text-align:right; font-weight:900; color:#f87171; font-size:0.95rem;">\${item.cantidad}</td>
+                </tr>
+              \`;
+            });
+          }
+
+          html += \`
+                  </tbody>
+                </table>
+              </div>
+              <div style="background:#0284c7; color:#fff; text-align:center; padding:6px; font-weight:900; font-size:1rem; letter-spacing:0.5px; border-top:1px solid #0369a1;">
+                \${groupTotal}
+              </div>
+            </div>
+          \`;
+        });
+
+        html += \`
+          </div>
+          <div style="background:#0f172a; border:2px solid var(--accent); border-radius:8px; padding:12px 18px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+            <div style="font-weight:700; color:#94a3b8; font-size:0.9rem;">
+              LÍNEAS DISTINTAS: <strong style="color:#fff;">\${items.length}</strong>
+            </div>
+            <div style="font-size:1.15rem; font-weight:900; color:var(--accent);">
+              TOTAL GENERAL: <span style="font-size:1.4rem; color:#fff; background:var(--accent); padding:2px 10px; border-radius:6px; margin-left:6px;">\${cont.totalAcumulado}</span>
+            </div>
+          </div>
+        \`;
+
+        container.innerHTML = html;
       } else {
-        alert(data.error);
+        let html = \`
+          <table style="width:100%; border-collapse:collapse; font-size:0.88rem; background:#0f172a; border-radius:8px; overflow:hidden;">
+            <thead>
+              <tr style="background:#1e293b; color:#94a3b8; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.5px;">
+                <th style="padding:10px 12px; text-align:left;">#</th>
+                <th style="padding:10px 12px; text-align:left;">Medida (W/P/R)</th>
+                <th style="padding:10px 12px; text-align:left;">Marca</th>
+                <th style="padding:10px 12px; text-align:right;">Cantidad</th>
+              </tr>
+            </thead>
+            <tbody>
+        \`;
+
+        const sortedItems = [...items].sort((a, b) => {
+          if (a.ancho !== b.ancho) return a.ancho - b.ancho;
+          if (a.perfil !== b.perfil) return a.perfil - b.perfil;
+          return a.llanta - b.llanta;
+        });
+
+        if (sortedItems.length === 0) {
+          html += '<tr><td colspan="4" style="text-align:center; padding:20px; color:#64748b;">No hay neumáticos en este lote</td></tr>';
+        } else {
+          sortedItems.forEach((it, idx) => {
+            const bg = idx % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent';
+            html += \`
+              <tr style="background:\${bg}; border-bottom:1px solid rgba(255,255,255,0.05);">
+                <td style="padding:8px 12px; color:#64748b;">\${idx + 1}</td>
+                <td style="padding:8px 12px; font-weight:700; color:#fff; font-family:monospace;">\${it.ancho}/\${it.perfil}R\${it.llanta}</td>
+                <td style="padding:8px 12px; color:#94a3b8;">\${it.marca || 'GENERICA'}</td>
+                <td style="padding:8px 12px; text-align:right; font-weight:900; color:var(--accent); font-size:1.1rem;">\${it.cantidad}</td>
+              </tr>
+            \`;
+          });
+        }
+
+        html += \`
+            </tbody>
+            <tfoot>
+              <tr style="background:#1e293b; font-weight:900; border-top:2px solid var(--border);">
+                <td colspan="3" style="padding:12px; text-align:right; color:#cbd5e1;">TOTAL UNIDADES:</td>
+                <td style="padding:12px; text-align:right; color:var(--accent); font-size:1.25rem;">\${cont.totalAcumulado}</td>
+              </tr>
+            </tfoot>
+          </table>
+        \`;
+
+        container.innerHTML = html;
       }
     }
 
