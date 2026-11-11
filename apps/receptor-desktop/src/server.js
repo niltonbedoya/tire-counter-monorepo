@@ -159,11 +159,137 @@ async function initServer() {
   logAudit(`Sistema inicializado con lote [Contenedor 203248] y recepción [Albarán REC-8012]`, 'SYSTEM');
 }
 
+
+const iconSvgContent = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#090d16"/>
+  <circle cx="256" cy="256" r="210" fill="#1e293b" stroke="#f59e0b" stroke-width="24"/>
+  <circle cx="256" cy="256" r="140" fill="#090d16" stroke="#334155" stroke-width="16"/>
+  <circle cx="256" cy="256" r="60" fill="#f59e0b"/>
+  <g stroke="#f59e0b" stroke-width="12" stroke-linecap="round">
+    <line x1="256" y1="20" x2="256" y2="45" />
+    <line x1="256" y1="467" x2="256" y2="492" />
+    <line x1="20" y1="256" x2="45" y2="256" />
+    <line x1="467" y1="256" x2="492" y2="256" />
+    <line x1="89" y1="89" x2="107" y2="107" />
+    <line x1="405" y1="405" x2="423" y2="423" />
+    <line x1="89" y1="423" x2="107" y2="405" />
+    <line x1="405" y1="107" x2="423" y2="89" />
+  </g>
+  <g stroke="#090d16" stroke-width="14">
+    <line x1="256" y1="196" x2="256" y2="126" />
+    <line x1="256" y1="316" x2="256" y2="386" />
+    <line x1="196" y1="256" x2="126" y2="256" />
+    <line x1="316" y1="256" x2="386" y2="256" />
+  </g>
+</svg>`;
+
+const manifestContent = JSON.stringify({
+  name: "Tire Counter - Control Industrial de Neumáticos",
+  short_name: "TireCounter",
+  description: "Terminal industrial para conteo, inspección y despacho de neumáticos offline-first",
+  start_url: "/",
+  display: "standalone",
+  orientation: "any",
+  background_color: "#0f172a",
+  theme_color: "#090d16",
+  icons: [
+    {
+      src: "/icon.svg",
+      sizes: "192x192 512x512 any",
+      type: "image/svg+xml",
+      purpose: "any maskable"
+    }
+  ]
+}, null, 2);
+
+const swScriptContent = `// Tire Counter Industrial PWA Service Worker
+const CACHE_NAME = 'tire-counter-v3';
+const STATIC_ASSETS = [
+  '/',
+  '/manifest.webmanifest',
+  '/icon.svg'
+];
+
+self.addEventListener('install', (event) => {
+  event.waitUntil(
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS)).then(() => self.skipWaiting())
+  );
+});
+
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) => {
+      return Promise.all(
+        keys.filter((key) => key !== CACHE_NAME).map((key) => caches.delete(key))
+      );
+    }).then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  const url = new URL(req.url);
+
+  // Navegación (HTML SPA): Network-First con fallback a cache
+  if (req.mode === 'navigate') {
+    event.respondWith(
+      fetch(req)
+        .then((networkRes) => {
+          if (networkRes.ok) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
+          return networkRes;
+        })
+        .catch(() => caches.match('/'))
+    );
+    return;
+  }
+
+  // Rutas API GET: Network-First con fallback a cache local
+  if (url.pathname.startsWith('/api/') && req.method === 'GET') {
+    event.respondWith(
+      fetch(req)
+        .then((networkRes) => {
+          if (networkRes.ok) {
+            const clone = networkRes.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+          }
+          return networkRes;
+        })
+        .catch(() => caches.match(req))
+    );
+    return;
+  }
+
+  // Assets estáticos (Iconos, manifest): Cache-First
+  event.respondWith(
+    caches.match(req).then((cached) => {
+      return cached || fetch(req).then((networkRes) => {
+        if (networkRes.ok && req.method === 'GET') {
+          const clone = networkRes.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(req, clone));
+        }
+        return networkRes;
+      });
+    })
+  );
+});
+`;
+
 const htmlContent = `<!DOCTYPE html>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#090d16">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="TireCounter">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="apple-touch-icon" href="/icon.svg">
   <title>Sistema de Conteo y Despacho de Neumáticos (Industrial)</title>
   <style>
     :root {
@@ -177,15 +303,144 @@ const htmlContent = `<!DOCTYPE html>
       --danger: #ef4444;
       --text: #f8fafc;
       --text-muted: #94a3b8;
+      --sat: env(safe-area-inset-top, 0px);
+      --sab: env(safe-area-inset-bottom, 0px);
+      --sal: env(safe-area-inset-left, 0px);
+      --sar: env(safe-area-inset-right, 0px);
     }
     * { box-sizing: border-box; margin: 0; padding: 0; min-width: 0; }
+    html, body {
+      width: 100%;
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
     body {
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       background: var(--bg-dark);
       color: var(--text);
       min-height: 100vh;
+      min-height: -webkit-fill-available;
       display: flex;
       flex-direction: column;
+      padding-top: var(--sat);
+      padding-bottom: var(--sab);
+      padding-left: var(--sal);
+      padding-right: var(--sar);
+    }
+    .status-conn-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 8px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      background: rgba(16, 185, 129, 0.15);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+      color: #34d399;
+      white-space: nowrap;
+    }
+    .status-conn-badge.offline {
+      background: rgba(245, 158, 11, 0.15);
+      border-color: rgba(245, 158, 11, 0.6);
+      color: #fbbf24;
+      animation: pulse-border 1.5s infinite;
+    }
+    .btn-install-pwa {
+      background: var(--accent);
+      color: #000;
+      font-weight: 800;
+      font-size: 0.75rem;
+      padding: 4px 9px;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      display: none;
+      align-items: center;
+      gap: 4px;
+      white-space: nowrap;
+    }
+    @media (max-width: 600px) {
+      header {
+        padding: 6px 10px !important;
+        gap: 6px !important;
+      }
+      .brand h1 {
+        font-size: 0.92rem !important;
+      }
+      .badge {
+        font-size: 0.65rem !important;
+        padding: 2px 5px !important;
+      }
+      .lang-switcher {
+        gap: 2px !important;
+      }
+      .lang-btn {
+        padding: 3px 6px !important;
+        font-size: 0.68rem !important;
+      }
+      nav.tabs {
+        padding: 0 4px !important;
+        gap: 2px !important;
+      }
+      .tab-btn {
+        padding: 8px 10px !important;
+        font-size: 0.78rem !important;
+      }
+      main {
+        padding: 8px !important;
+      }
+      .card {
+        padding: 12px !important;
+        margin-bottom: 10px !important;
+      }
+      .total-number {
+        font-size: 2.2rem !important;
+      }
+      .total-counter {
+        padding: 8px !important;
+        margin-bottom: 10px !important;
+      }
+      .picker-columns-row {
+        gap: 6px !important;
+      }
+      .picker-col {
+        padding: 4px !important;
+        border-radius: 6px !important;
+      }
+      .picker-col-title {
+        font-size: 0.7rem !important;
+      }
+      .picker-col-badge {
+        font-size: 0.72rem !important;
+        padding: 1px 4px !important;
+      }
+      .picker-scroll-list {
+        max-height: 155px !important;
+        gap: 4px !important;
+      }
+      .picker-item {
+        min-height: 38px !important;
+        font-size: 0.95rem !important;
+        border-radius: 5px !important;
+      }
+      .active-measure-banner {
+        padding: 6px 10px !important;
+        margin-top: 8px !important;
+      }
+      .active-measure-code {
+        font-size: 1.25rem !important;
+      }
+      .modifier-grid {
+        gap: 4px !important;
+        margin-top: 10px !important;
+      }
+      .modifier-grid .touch-btn {
+        min-height: 48px !important;
+        font-size: 1.1rem !important;
+        padding: 0 !important;
+      }
     }
     header {
       background: #090d16;
@@ -728,15 +983,17 @@ const htmlContent = `<!DOCTYPE html>
     <div class="brand">
       <span class="badge" id="header-badge">COUNTER</span>
       <h1 id="header-title">Terminal Industrial</h1>
+      <div id="network-status-indicator" class="status-conn-badge">🟢 En Línea</div>
+      <button id="btn-install-pwa" class="btn-install-pwa" onclick="installPWA()">📲 Instalar</button>
     </div>
-    <div class="user-cloud-bar" style="display: flex; align-items: center; gap: 10px; margin-left: auto; margin-right: 12px; flex-wrap: wrap;">
-      <div id="cloud-status-indicator" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.75rem; background: rgba(16,185,129,0.15); border: 1px solid #10b981; padding: 4px 10px; border-radius: 20px; color: #10b981; font-weight: 600;">
-        <span style="width: 8px; height: 8px; background: #10b981; border-radius: 50%; box-shadow: 0 0 8px #10b981; display: inline-block;"></span>
-        <span id="txt-cloud-region">☁️ Supabase (Seoul)</span>
+    <div class="user-cloud-bar" style="display: flex; align-items: center; gap: 8px; margin-left: auto; margin-right: 8px; flex-wrap: wrap;">
+      <div id="cloud-status-indicator" style="display: inline-flex; align-items: center; gap: 6px; font-size: 0.72rem; background: rgba(16,185,129,0.15); border: 1px solid #10b981; padding: 3px 8px; border-radius: 20px; color: #10b981; font-weight: 600;">
+        <span style="width: 7px; height: 7px; background: #10b981; border-radius: 50%; box-shadow: 0 0 6px #10b981; display: inline-block;"></span>
+        <span id="txt-cloud-region">☁️ Supabase</span>
       </div>
-      <div id="user-session-badge" style="display: inline-flex; align-items: center; gap: 8px; background: #1e293b; border: 1px solid #334155; padding: 4px 10px; border-radius: 8px; font-size: 0.8rem; color: #f8fafc;">
-        <span id="current-user-display">👤 <strong id="lbl-user-code">---</strong> (<span id="current-user-role">---</span>)</span>
-        <button id="btn-logout" onclick="logoutUser()" style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid #ef4444; padding: 2px 8px; border-radius: 4px; font-size: 0.72rem; cursor: pointer; font-weight: 600;">Salir</button>
+      <div id="user-session-badge" style="display: inline-flex; align-items: center; gap: 6px; background: #1e293b; border: 1px solid #334155; padding: 3px 8px; border-radius: 8px; font-size: 0.75rem; color: #f8fafc;">
+        <span id="current-user-display">👤 <strong id="lbl-user-code">---</strong></span>
+        <button id="btn-logout" onclick="logoutUser()" style="background: rgba(239,68,68,0.2); color: #f87171; border: 1px solid #ef4444; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem; cursor: pointer; font-weight: 600;">Salir</button>
       </div>
     </div>
     <div class="lang-switcher">
@@ -1741,16 +1998,123 @@ const htmlContent = `<!DOCTYPE html>
       if (tabId === 'auditor') loadAuditLogs();
     }
 
-    async function loadTerminalData() {
-      const res = await fetch('/api/contenedores/' + activeContainerId);
-      const data = await res.json();
-      if (!data.found) return;
+    // OFFLINE QUEUE & SYNC ENGINE
+    let offlineMutationQueue = JSON.parse(localStorage.getItem('tire_counter_offline_queue') || '[]');
+    let currentContainerDataCache = null;
 
+    function saveOfflineQueue() {
+      localStorage.setItem('tire_counter_offline_queue', JSON.stringify(offlineMutationQueue));
+      updateConnectionStatus();
+    }
+
+    function updateConnectionStatus() {
+      const el = document.getElementById('network-status-indicator');
+      if (!el) return;
+      const isOnline = navigator.onLine;
+      const pending = offlineMutationQueue.length;
+      if (!isOnline) {
+        el.className = 'status-conn-badge offline';
+        el.innerHTML = '🟠 Sin Cobertura (' + pending + ' pend.)';
+      } else if (pending > 0) {
+        el.className = 'status-conn-badge offline';
+        el.innerHTML = '🔄 Sincronizando (' + pending + ')...';
+      } else {
+        el.className = 'status-conn-badge';
+        el.innerHTML = '🟢 En Línea';
+      }
+    }
+
+    function applyOptimisticItem(payload) {
+      if (!currentContainerDataCache) return;
+      const items = currentContainerDataCache.items || [];
+      const match = items.find(it =>
+        it.ancho === payload.ancho &&
+        it.perfil === payload.perfil &&
+        it.llanta === payload.llanta &&
+        (it.marca || '') === (payload.marca || '')
+      );
+
+      if (match) {
+        match.cantidad += payload.deltaCantidad;
+        if (match.cantidad <= 0) {
+          currentContainerDataCache.items = items.filter(it => it !== match);
+        }
+      } else if (payload.deltaCantidad > 0) {
+        items.push({
+          ancho: payload.ancho,
+          perfil: payload.perfil,
+          llanta: payload.llanta,
+          marca: payload.marca || '',
+          cantidad: payload.deltaCantidad
+        });
+      }
+
+      currentContainerDataCache.container.totalAcumulado = currentContainerDataCache.items.reduce((acc, cur) => acc + cur.cantidad, 0);
+      renderTerminalData(currentContainerDataCache);
+    }
+
+    async function drainOfflineQueue() {
+      if (!navigator.onLine || offlineMutationQueue.length === 0) {
+        updateConnectionStatus();
+        return;
+      }
+
+      const queueCopy = [...offlineMutationQueue];
+      while (queueCopy.length > 0) {
+        const item = queueCopy[0];
+        try {
+          const res = await fetch('/api/contenedores/' + item.containerId + '/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(item.payload),
+          });
+          if (res.ok) {
+            queueCopy.shift();
+            offlineMutationQueue = [...queueCopy];
+            saveOfflineQueue();
+          } else {
+            queueCopy.shift();
+            offlineMutationQueue = [...queueCopy];
+            saveOfflineQueue();
+          }
+        } catch (e) {
+          break; // Sigue sin cobertura
+        }
+      }
+
+      updateConnectionStatus();
+      if (offlineMutationQueue.length === 0) {
+        loadTerminalData();
+      }
+    }
+
+    async function loadTerminalData() {
+      try {
+        const res = await fetch('/api/contenedores/' + activeContainerId);
+        if (!res.ok) throw new Error('Error al cargar contenedor');
+        const data = await res.json();
+        if (!data.found) return;
+        currentContainerDataCache = data;
+        localStorage.setItem('cached_container_' + activeContainerId, JSON.stringify(data));
+        renderTerminalData(data);
+      } catch (err) {
+        console.warn('Network offline, using cached container data:', err);
+        const cached = localStorage.getItem('cached_container_' + activeContainerId);
+        if (cached) {
+          currentContainerDataCache = JSON.parse(cached);
+          renderTerminalData(currentContainerDataCache);
+        }
+      }
+      updateConnectionStatus();
+    }
+
+    function renderTerminalData(data) {
+      if (!data || !data.container) return;
       const t = i18nDicts[currentLang] || i18nDicts.es;
 
       document.getElementById('lbl-total-count').innerText = data.container.totalAcumulado;
       document.getElementById('txt-active-container').innerText = t.counter.active_container + ': ' + data.container.codigoReferencia;
-      
+
       const isReception = data.container.tipoOperacion === 'RECEPCION';
       const badgeType = document.getElementById('badge-operation-type');
       if (badgeType) {
@@ -1764,7 +2128,6 @@ const htmlContent = `<!DOCTYPE html>
       const translatedStatus = (t.vault && t.vault[statusKey]) || data.container.estado;
       badge.innerText = translatedStatus;
 
-      // Disable or enable dispatch button based on state
       const isLocked = data.container.estado !== 'ACTIVO';
       const btnAction = document.getElementById('btn-dispatch');
       btnAction.disabled = isLocked;
@@ -1790,16 +2153,16 @@ const htmlContent = `<!DOCTYPE html>
         boxLocked.style.display = isLocked ? 'block' : 'none';
       }
 
-      // Photos count
-      document.getElementById('lbl-photos-count').innerText = t.counter.registered_photos_prefix + ' ' + data.fotos.length + ' ' + t.counter.registered_photos_suffix;
+      const photosCount = (data.fotos || []).length;
+      document.getElementById('lbl-photos-count').innerText = t.counter.registered_photos_prefix + ' ' + photosCount + ' ' + t.counter.registered_photos_suffix;
 
-      // Table items
       const tbody = document.getElementById('tbl-items');
       tbody.innerHTML = '';
-      if (data.items.length === 0) {
+      const items = data.items || [];
+      if (items.length === 0) {
         tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#94a3b8;">' + t.counter.empty_items + '</td></tr>';
       } else {
-        data.items.forEach(item => {
+        items.forEach(item => {
           const tr = document.createElement('tr');
           const sizeStr = item.ancho + '/' + item.perfil + 'R' + item.llanta;
           const brandBadge = (item.marca && item.marca !== 'GENERICA') ? '<span style="font-size:0.7rem; color:var(--text-muted); display:block;">' + item.marca + '</span>' : '';
@@ -1828,21 +2191,34 @@ const htmlContent = `<!DOCTYPE html>
         llanta: currentRim,
         ancho: currentWidth,
         perfil: currentProfile,
-        marca: '', // Sin marca, siempre genérica por defecto
+        marca: '',
         deltaCantidad: delta,
       };
 
-      const res = await fetch('/api/contenedores/' + activeContainerId + '/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      if (!navigator.onLine) {
+        offlineMutationQueue.push({ containerId: activeContainerId, payload, timestamp: Date.now() });
+        saveOfflineQueue();
+        applyOptimisticItem(payload);
+        return;
+      }
 
-      const result = await res.json();
-      if (!res.ok) {
-        alert(result.error || 'Error al actualizar inventario');
-      } else {
-        loadTerminalData();
+      try {
+        const res = await fetch('/api/contenedores/' + activeContainerId + '/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const result = await res.json();
+          alert(result.error || 'Error al actualizar inventario');
+        } else {
+          loadTerminalData();
+        }
+      } catch (err) {
+        offlineMutationQueue.push({ containerId: activeContainerId, payload, timestamp: Date.now() });
+        saveOfflineQueue();
+        applyOptimisticItem(payload);
       }
     }
 
@@ -1855,17 +2231,30 @@ const htmlContent = `<!DOCTYPE html>
         deltaCantidad: delta,
       };
 
-      const res = await fetch('/api/contenedores/' + activeContainerId + '/items', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
+      if (!navigator.onLine) {
+        offlineMutationQueue.push({ containerId: activeContainerId, payload, timestamp: Date.now() });
+        saveOfflineQueue();
+        applyOptimisticItem(payload);
+        return;
+      }
 
-      if (res.ok) {
-        loadTerminalData();
-      } else {
-        const err = await res.json();
-        alert(err.error);
+      try {
+        const res = await fetch('/api/contenedores/' + activeContainerId + '/items', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (res.ok) {
+          loadTerminalData();
+        } else {
+          const err = await res.json();
+          alert(err.error);
+        }
+      } catch (err) {
+        offlineMutationQueue.push({ containerId: activeContainerId, payload, timestamp: Date.now() });
+        saveOfflineQueue();
+        applyOptimisticItem(payload);
       }
     }
 
@@ -2347,11 +2736,60 @@ const htmlContent = `<!DOCTYPE html>
       });
     }
 
+    // PWA Install Prompt
+    let deferredInstallPrompt = null;
+    window.addEventListener('beforeinstallprompt', (e) => {
+      e.preventDefault();
+      deferredInstallPrompt = e;
+      const btn = document.getElementById('btn-install-pwa');
+      if (btn) btn.style.display = 'inline-flex';
+    });
+
+    async function installPWA() {
+      if (deferredInstallPrompt) {
+        deferredInstallPrompt.prompt();
+        const { outcome } = await deferredInstallPrompt.userChoice;
+        if (outcome === 'accepted') {
+          const btn = document.getElementById('btn-install-pwa');
+          if (btn) btn.style.display = 'none';
+        }
+        deferredInstallPrompt = null;
+      } else {
+        alert('Para instalar como app en Android / Samsung S23: pulsa los 3 puntos de Chrome y selecciona "Instalar aplicación" o "Añadir a pantalla de inicio".\\n\\nEn iPhone: pulsa el botón Compartir y selecciona "Añadir a pantalla de inicio".');
+      }
+    }
+
+    window.addEventListener('appinstalled', () => {
+      const btn = document.getElementById('btn-install-pwa');
+      if (btn) btn.style.display = 'none';
+      deferredInstallPrompt = null;
+    });
+
+    // Offline event listeners & auto-drain
+    window.addEventListener('online', () => {
+      updateConnectionStatus();
+      drainOfflineQueue();
+    });
+    window.addEventListener('offline', () => {
+      updateConnectionStatus();
+    });
+    setInterval(drainOfflineQueue, 5000);
+
+    // Register Service Worker
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js').catch(err => {
+          console.warn('SW register error:', err);
+        });
+      });
+    }
+
     // Initial load
     updateMeasureDisplay();
     setLang('es');
     loadHubData();
     checkSavedAuth();
+    updateConnectionStatus();
   </script>
 </body>
 </html>`;
@@ -2373,6 +2811,31 @@ const server = http.createServer(async (req, res) => {
   }
 
   try {
+    // PWA Manifest
+    if ((pathname === '/manifest.webmanifest' || pathname === '/manifest.json') && method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'application/manifest+json; charset=utf-8' });
+      res.end(manifestContent);
+      return;
+    }
+
+    // PWA Service Worker
+    if (pathname === '/sw.js' && method === 'GET') {
+      res.writeHead(200, {
+        'Content-Type': 'application/javascript; charset=utf-8',
+        'Service-Worker-Allowed': '/',
+        'Cache-Control': 'no-cache',
+      });
+      res.end(swScriptContent);
+      return;
+    }
+
+    // PWA Icon
+    if (pathname === '/icon.svg' && method === 'GET') {
+      res.writeHead(200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'public, max-age=86400' });
+      res.end(iconSvgContent);
+      return;
+    }
+
     // 1. Root: Servir SPA
     if (pathname === '/' && method === 'GET') {
       res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });

@@ -202,4 +202,30 @@ describe('End-to-End HTTP Web Server & Receptor API Suite', () => {
     expect(cRes.data.container.estado).toBe('ACTIVO');
     expect(cRes.data.items.length).toBeGreaterThan(0);
   });
+
+  it('GET /manifest.webmanifest should return valid PWA manifest with standalone display and icons', async () => {
+    const res = await request('GET', '/manifest.webmanifest');
+    expect(res.status).toBe(200);
+    expect(res.data.name).toBe('Tire Counter - Control Industrial de Neumáticos');
+    expect(res.data.short_name).toBe('TireCounter');
+    expect(res.data.display).toBe('standalone');
+    expect(Array.isArray(res.data.icons)).toBe(true);
+    expect(res.data.icons.length).toBeGreaterThan(0);
+  });
+
+  it('GET /sw.js should serve the Industrial Service Worker script', async () => {
+    const res = await request('GET', '/sw.js');
+    expect(res.status).toBe(200);
+    expect(typeof res.data).toBe('string');
+    expect(res.data).toContain('CACHE_NAME');
+    expect(res.data).toContain('Service Worker');
+  });
+
+  it('GET /icon.svg should serve the industrial PWA tire icon', async () => {
+    const res = await request('GET', '/icon.svg');
+    expect(res.status).toBe(200);
+    expect(typeof res.data).toBe('string');
+    expect(res.data).toContain('<svg');
+    expect(res.data).toContain('circle');
+  });
 });
