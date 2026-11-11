@@ -14,7 +14,7 @@ async function parseXlsxStructure(buffer) {
         const workbook = new exceljs_1.default.Workbook();
         // @ts-ignore
         await workbook.xlsx.load(buffer);
-        const sheet = workbook.worksheets[0];
+        const sheet = workbook.worksheets.find((s) => s.name.toLowerCase().includes('detail') || s.name.toLowerCase().includes('manifest')) || workbook.worksheets[0];
         if (!sheet) {
             return { valid: false, sheets: [], headers: [], rowCount: 0, error: 'No worksheets found' };
         }
@@ -24,7 +24,9 @@ async function parseXlsxStructure(buffer) {
         let headers = [];
         sheet.eachRow((row, rowNumber) => {
             const values = row.values;
-            if (Array.isArray(values) && values.some((v) => typeof v === 'string' && (v.includes('Rim') || v.includes('Size') || v.includes('Llanta') || v.includes('Quantity')))) {
+            if (Array.isArray(values) &&
+                values.some((v) => typeof v === 'string' &&
+                    (v.includes('Rim') || v.includes('Size') || v.includes('Llanta') || v.includes('Quantity')))) {
                 headerRowNumber = rowNumber;
                 headers = values.filter(Boolean).map(String);
             }
@@ -50,23 +52,35 @@ async function auditManifestTotals(buffer, expectedTotal) {
     const workbook = new exceljs_1.default.Workbook();
     // @ts-ignore
     await workbook.xlsx.load(buffer);
-    const sheet = workbook.worksheets[0];
+    const sheet = workbook.worksheets.find((s) => s.name.toLowerCase().includes('detail') || s.name.toLowerCase().includes('manifest')) || workbook.worksheets[0];
     let excelSum = 0;
     let qtyColIndex = -1;
     sheet.eachRow((row, rowNumber) => {
         const values = row.values;
+        // Skip the summary TOTAL row to avoid double counting if present
+        if (Array.isArray(values) &&
+            values.some((v) => typeof v === 'string' &&
+                (v.trim().toUpperCase() === 'TOTAL' || v.trim().toUpperCase() === 'GRAN TOTAL'))) {
+            return;
+        }
         if (qtyColIndex === -1 && Array.isArray(values)) {
             values.forEach((v, idx) => {
-                if (typeof v === 'string' && (v.toLowerCase().includes('quantity') || v.toLowerCase().includes('cantidad') || v.toLowerCase().includes('qty'))) {
+                if (typeof v === 'string' &&
+                    (v.toLowerCase().includes('quantity') ||
+                        v.toLowerCase().includes('cantidad') ||
+                        v.toLowerCase().includes('qty'))) {
                     qtyColIndex = idx;
                 }
             });
         }
         else if (qtyColIndex !== -1) {
             const cellVal = row.getCell(qtyColIndex).value;
-            if (typeof cellVal === 'number') {
-                excelSum += cellVal;
-            }
+            const num = typeof cellVal === 'number'
+                ? cellVal
+                : cellVal && typeof cellVal === 'object' && typeof cellVal.result === 'number'
+                    ? cellVal.result
+                    : 0;
+            excelSum += num;
         }
     });
     return {

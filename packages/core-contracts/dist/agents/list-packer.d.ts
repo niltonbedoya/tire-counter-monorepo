@@ -7,5 +7,6 @@ export interface ListPackerInput {
         buffer: Buffer | Uint8Array;
     }>;
 }
+export declare function formatTireDimension(item: ItemNeumatico): string;
 export declare function compileOpenXmlManifest(contenedor: ProyectoContenedor, items: ItemNeumatico[]): Promise<Buffer>;
 export declare function generateDispatchZip(input: ListPackerInput): Promise<PaqueteDespacho>;
