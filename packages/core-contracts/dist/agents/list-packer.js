@@ -44,6 +44,14 @@ async function compileOpenXmlManifest(contenedor, items) {
         pattern: 'solid',
         fgColor: { argb: 'FF2E86C1' }, // Vivid blue for subtotal pills
     };
+    // Standard sorting rule: Width (Ancho) ASC -> Profile (Perfil) ASC -> Rim (Llanta) ASC
+    const sortByWidthProfileRim = (a, b) => {
+        if (a.ancho !== b.ancho)
+            return a.ancho - b.ancho;
+        if (a.perfil !== b.perfil)
+            return a.perfil - b.perfil;
+        return a.llanta - b.llanta;
+    };
     // =========================================================================
     // WORKSHEET 1: PACKING LIST (VISUAL MATRIX - PRINT READY ON 1 PAGE)
     // =========================================================================
@@ -92,29 +100,14 @@ async function compileOpenXmlManifest(contenedor, items) {
     visualSheet.getRow(2).height = 20;
     // Row 3: Blank separator
     visualSheet.getRow(3).height = 8;
-    // Partition items into the 6 standard industry buckets:
-    // Tier 1 (Top):
-    //   Col 1: R12 - R14 (llanta <= 14)
-    //   Col 2: R16 (llanta === 16)
-    //   Col 3: R18 - R19 (llanta === 18)
-    // Tier 2 (Bottom):
-    //   Col 1: R15 (llanta === 15)
-    //   Col 2: R17 (llanta === 17)
-    //   Col 3: R19 - R22+ (llanta === 19 || llanta >= 20)
-    const sortFn = (a, b) => {
-        if (a.llanta !== b.llanta)
-            return a.llanta - b.llanta;
-        if (a.ancho !== b.ancho)
-            return a.ancho - b.ancho;
-        return a.perfil - b.perfil;
-    };
-    const bucket1 = items.filter((i) => i.llanta <= 14).sort(sortFn);
-    const bucket2 = items.filter((i) => i.llanta === 15).sort(sortFn);
-    const bucket3 = items.filter((i) => i.llanta === 16).sort(sortFn);
-    const bucket4 = items.filter((i) => i.llanta === 17).sort(sortFn);
-    const bucket5 = items.filter((i) => i.llanta === 18).sort(sortFn);
-    const bucket6 = items.filter((i) => i.llanta >= 19).sort(sortFn);
-    // Helper to apply borders to a cell
+    // Partition items into the 6 standard industry buckets sorted by Width -> Profile -> Rim:
+    const bucket1 = items.filter((i) => i.llanta <= 14).sort(sortByWidthProfileRim);
+    const bucket2 = items.filter((i) => i.llanta === 15).sort(sortByWidthProfileRim);
+    const bucket3 = items.filter((i) => i.llanta === 16).sort(sortByWidthProfileRim);
+    const bucket4 = items.filter((i) => i.llanta === 17).sort(sortByWidthProfileRim);
+    const bucket5 = items.filter((i) => i.llanta === 18).sort(sortByWidthProfileRim);
+    const bucket6 = items.filter((i) => i.llanta >= 19).sort(sortByWidthProfileRim);
+    // Helper to apply borders and formatting to a cell
     const setCell = (rowNum, colLetter, val, options = {}) => {
         const cell = visualSheet.getCell(`${colLetter}${rowNum}`);
         if (options.formula) {
@@ -308,10 +301,8 @@ async function compileOpenXmlManifest(contenedor, items) {
     });
     // Grand Total Calculation
     const grandTotal = sumB1 + sumB2 + sumB3 + sumB4 + sumB5 + sumB6;
-    // Grand Total Cell (placed in Col H, or right next to it, matching the image footer)
-    const grandTotalRow = tier2SubtotalRow;
-    // We can write GRAND TOTAL in column G of the next row or right below
-    const totalRow = grandTotalRow + 1;
+    // Grand Total Cell
+    const totalRow = tier2SubtotalRow + 1;
     visualSheet.getRow(totalRow).height = 24;
     const lblTotal = visualSheet.getCell(`G${totalRow}`);
     lblTotal.value = 'TOTAL';
@@ -330,15 +321,16 @@ async function compileOpenXmlManifest(contenedor, items) {
     };
     // =========================================================================
     // WORKSHEET 2: DETAILED MANIFEST (TABULAR CUSTOMS / ERP VIEW)
+    // Column order strictly: Width (mm), Profile (%), Rim (in)
     // =========================================================================
     const manifestSheet = workbook.addWorksheet('Detailed Manifest', {
         pageSetup: { orientation: 'portrait', paperSize: 9 },
     });
     manifestSheet.columns = [
         { key: 'line', width: 8 },
-        { key: 'rim', width: 10 },
-        { key: 'width', width: 12 },
-        { key: 'profile', width: 12 },
+        { key: 'width', width: 14 },
+        { key: 'profile', width: 14 },
+        { key: 'rim', width: 12 },
         { key: 'brand', width: 18 },
         { key: 'key', width: 28 },
         { key: 'qty', width: 16 },
@@ -351,26 +343,20 @@ async function compileOpenXmlManifest(contenedor, items) {
         `Date: ${today.toISOString().split('T')[0]}`,
     ]);
     manifestSheet.addRow([]);
-    // Estilo de encabezados de columnas (Row 4)
+    // Estilo de encabezados de columnas (Row 4): Width, Profile, Rim
     const headerRow = manifestSheet.addRow([
         'Line',
-        'Rim (in)',
         'Width (mm)',
         'Profile (%)',
+        'Rim (in)',
         'Brand',
         'Composite Key',
         'Quantity (PCS)',
     ]);
     headerRow.font = { bold: true };
     headerRow.alignment = { horizontal: 'center', vertical: 'middle' };
-    // 2. Filas ordenadas por Llanta asc, luego Ancho, luego Perfil
-    const sortedItems = [...items].sort((a, b) => {
-        if (a.llanta !== b.llanta)
-            return a.llanta - b.llanta;
-        if (a.ancho !== b.ancho)
-            return a.ancho - b.ancho;
-        return a.perfil - b.perfil;
-    });
+    // 2. Filas ordenadas por Width asc, luego Profile asc, luego Rim asc
+    const sortedItems = [...items].sort(sortByWidthProfileRim);
     let lineNo = 1;
     let totalCalculado = 0;
     const dataStartRow = 5;
@@ -378,9 +364,9 @@ async function compileOpenXmlManifest(contenedor, items) {
         totalCalculado += item.cantidad;
         const r = manifestSheet.addRow([
             lineNo++,
-            item.llanta,
             item.ancho,
             item.perfil,
+            item.llanta,
             item.marca || 'GENERICA',
             item.claveCompuesta,
             item.cantidad,
