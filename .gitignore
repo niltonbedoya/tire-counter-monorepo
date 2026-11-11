@@ -40,6 +40,7 @@ coverage/
 *.exe
 *.tmp
 *.temp
+*.xlsx
 .env
 .env.local
 .env.*.local
